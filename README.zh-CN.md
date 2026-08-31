@@ -32,6 +32,8 @@ go vet ./...
 go test ./... -run '^$' -bench . -benchmem -benchtime=100ms -count=1
 ```
 
+完整本地门禁使用 `scripts/verify.sh` 或 `scripts/verify.ps1`。完整门禁还会在 `external/gnalloy-bench`、`external/gnet-bench` 和 `external/netpoll-bench` 中执行 `go test` 与 `go vet`。
+
 跨仓库开发使用 `G:\opensource\gnalloy\go.work`。独立模块复验时设置 `GOWORK=off`。
 
 ## 许可证

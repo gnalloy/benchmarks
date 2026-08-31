@@ -32,6 +32,8 @@ go vet ./...
 go test ./... -run '^$' -bench . -benchmem -benchtime=100ms -count=1
 ```
 
+Use `scripts/verify.sh` or `scripts/verify.ps1` for the full local gate. The full gate also runs `go test` and `go vet` inside `external/gnalloy-bench`, `external/gnet-bench`, and `external/netpoll-bench`.
+
 For multi-repository development, use the workspace at `G:\opensource\gnalloy\go.work`. For standalone verification, set `GOWORK=off`.
 
 ## License

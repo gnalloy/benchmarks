@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/panjf2000/gnet/v2 v2.10.0
-	gnalloy.org/gnalloy v0.0.0
+	gnalloy.org/benchmarks v0.0.0-20260831160907-0c95b32a4503
 )
 
 require (

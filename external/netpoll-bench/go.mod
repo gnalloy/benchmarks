@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/cloudwego/netpoll v0.7.5
-	gnalloy.org/gnalloy v0.0.0
+	gnalloy.org/benchmarks v0.0.0-20260831160907-0c95b32a4503
 )
 
 require (

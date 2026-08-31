@@ -41,6 +41,19 @@ jobs:
         env:
           GOWORK: "off"
           GOTOOLCHAIN: local
+      - name: Test external Go benchmark modules
+        shell: bash
+        run: |
+          for module in external/gnalloy-bench external/gnet-bench external/netpoll-bench; do
+            (
+              cd "$module"
+              go test ./... -count=1
+              go vet ./...
+            )
+          done
+        env:
+          GOWORK: "off"
+          GOTOOLCHAIN: local
 
   benchmark-smoke:
     name: benchmark smoke

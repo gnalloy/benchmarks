@@ -153,8 +153,8 @@ func TestParseConfigResolvesDefaultTCPEchoExecutor(t *testing.T) {
 	if cfg.TCPEchoExecutorQueueSize != defaultTCPEchoExecutorQueueSize {
 		t.Fatalf("tcpEchoExecutorQueueSize=%d, want %d", cfg.TCPEchoExecutorQueueSize, defaultTCPEchoExecutorQueueSize)
 	}
-	if cfg.FlushStrategyName != defaultFlushStrategyName || cfg.FlushStrategy != channel.FlushOnEventLoopBatch {
-		t.Fatalf("flush strategy=%s/%d, want event-loop-batch", cfg.FlushStrategyName, cfg.FlushStrategy)
+	if cfg.FlushStrategyName != defaultFlushStrategyName || cfg.FlushStrategy != channel.FlushOnReadComplete {
+		t.Fatalf("flush strategy=%s/%d, want read-complete", cfg.FlushStrategyName, cfg.FlushStrategy)
 	}
 }
 

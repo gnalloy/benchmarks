@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	defaultFlushStrategyName = flushStrategyEventLoopBatch
+	defaultFlushStrategyName = flushStrategyReadComplete
 
 	flushStrategyImmediate      = "immediate"
 	flushStrategyReadComplete   = "read-complete"

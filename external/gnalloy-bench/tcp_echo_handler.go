@@ -5,7 +5,6 @@ import (
 
 	"gnalloy.org/gnalloy/buffer"
 	"gnalloy.org/gnalloy/channel"
-	"gnalloy.org/gnalloy/message"
 )
 
 func newTCPEchoHandler(cfg config, group *tcpEchoExecutorGroup) (channel.Handler, error) {
@@ -83,6 +82,7 @@ func (ownerLoopTCPEchoHandler) ExceptionCaught(ctx *channel.HandlerContext, _ er
 type offloadedTCPEchoHandler struct {
 	worker   *tcpEchoExecutorWorker
 	delegate channel.ChannelReadHandler
+	inbound  tcpEchoInboundQueue
 }
 
 func newOffloadedTCPEchoHandler(group *tcpEchoExecutorGroup, delegate channel.Handler) (*offloadedTCPEchoHandler, error) {
@@ -97,15 +97,13 @@ func newOffloadedTCPEchoHandler(group *tcpEchoExecutorGroup, delegate channel.Ha
 	if worker == nil {
 		return nil, errInvalidConfig
 	}
-	return &offloadedTCPEchoHandler{worker: worker, delegate: read}, nil
+	h := &offloadedTCPEchoHandler{worker: worker, delegate: read}
+	h.inbound.init(h)
+	return h, nil
 }
 
 func (h *offloadedTCPEchoHandler) ChannelRead(ctx *channel.HandlerContext, msg any) {
-	if err := h.worker.submit(func() {
-		defer recoverTCPEchoHandler(ctx)
-		h.delegate.ChannelRead(ctx, msg)
-	}); err != nil {
-		message.Release(msg)
+	if err := h.inbound.submit(ctx, msg); err != nil {
 		ctx.FireExceptionCaught(err)
 	}
 }

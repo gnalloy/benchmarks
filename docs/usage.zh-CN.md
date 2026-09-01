@@ -33,6 +33,16 @@ import "gnalloy.org/benchmarks"
 
 Linux 矩阵覆盖 TCP、UDP、QUIC stream、HTTP/1.1、HTTP/2、HTTP/3、HTTPS TLS 1.1/1.2/1.3、Gnalloy、Netty、gnet、fasthttp 与 netpoll。非法或不支持的组合会记录为 skipped scenario，并保留明确原因。可执行场景向 harness 传入 15 分钟 timeout，并使用 16 分钟外层场景保护。
 
+## Linux TCP 专项测试
+
+构建 `external/bin/gnalloy-bench` 和 `external/bin/netpoll-bench` 后，在同一台 Linux 主机执行：
+
+```bash
+./scripts/run-linux-tcp-optimized.sh
+```
+
+脚本任意时刻只运行一个进程，在五轮采样中交替 Gnalloy/netpoll 的先后顺序，并记录主机信息、参数、二进制哈希、吞吐和延迟。payload、负载、冷却时间、可执行文件、输出路径和进程优先级均可通过环境变量设置。脚本不会修改 CPU governor 或停止主机服务。已验证的 16KiB 结果和 syscall 分析见 `reports/linux-tcp-read-write-optimization.md`。
+
 ## API 选择
 
 通过 API 清单选择当前协议路径需要的具体构造函数或 option 类型：

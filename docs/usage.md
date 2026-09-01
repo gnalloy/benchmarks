@@ -33,6 +33,16 @@ Build external harnesses first, then run the built-in matrix from the workspace 
 
 The Linux matrix covers TCP, UDP, QUIC stream, HTTP/1.1, HTTP/2, HTTP/3, HTTPS TLS 1.1/1.2/1.3, Gnalloy, Netty, gnet, fasthttp, and netpoll. Illegal or unsupported combinations are recorded as skipped scenarios with explicit reasons. Executable scenarios pass a 15-minute harness timeout and use a 16-minute outer scenario guard.
 
+## Focused Linux TCP Benchmark
+
+After building `external/bin/gnalloy-bench` and `external/bin/netpoll-bench`, run the focused TCP comparison on one Linux host:
+
+```bash
+./scripts/run-linux-tcp-optimized.sh
+```
+
+The script runs one process at a time, alternates Gnalloy/netpoll order across five repetitions, and records host metadata, parameters, binary hashes, throughput, and latency. Environment variables control payloads, load, cooldown, executable paths, output path, and process priority. It does not change the CPU governor or stop host services. See `reports/linux-tcp-read-write-optimization.md` for the verified 16KiB result and syscall analysis.
+
 ## API Selection
 
 Use the API inventory to choose the exact constructor or option type for your protocol path:

@@ -26,14 +26,15 @@ This module contains benchmark, parity, and pressure-test tooling. It is for mea
 - `gnalloy.org/benchmarks/parity` (`parity`)
 
 ## Direct Gnalloy Dependencies
-- `gnalloy.org/gnalloy`
+
 - `gnalloy.org/codec-http3`
-- `gnalloy.org/handler-tls`
+- `gnalloy.org/gnalloy`
 - `gnalloy.org/transport-http3`
 - `gnalloy.org/transport-quic`
 
-## Direct Dependents in the Current Module Plan
-- No repository in the current module plan depends on this module directly.
+## Direct Dependents in the Current Repository Set
+
+- `gnalloy.org/examples`
 
 ## Architecture Position
 

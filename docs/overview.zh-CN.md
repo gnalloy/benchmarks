@@ -26,14 +26,15 @@ Gnalloy 模块化网络栈的基准、性能对标与压测工具。
 - `gnalloy.org/benchmarks/parity`（`parity`）
 
 ## 直接 Gnalloy 依赖
-- `gnalloy.org/gnalloy`
+
 - `gnalloy.org/codec-http3`
-- `gnalloy.org/handler-tls`
+- `gnalloy.org/gnalloy`
 - `gnalloy.org/transport-http3`
 - `gnalloy.org/transport-quic`
 
-## 当前模块规划中的直接下游
-- 当前模块规划中没有其他仓库直接依赖该模块。
+## 当前仓库集合中的直接下游
+
+- `gnalloy.org/examples`
 
 ## 架构位置
 

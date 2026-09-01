@@ -48,9 +48,9 @@ It does not absorb neighboring module responsibilities. Core primitives stay in 
 - `gnalloy.org/benchmarks/parity` (`parity`)
 
 ## Gnalloy Dependencies
-- `gnalloy.org/gnalloy`
+
 - `gnalloy.org/codec-http3`
-- `gnalloy.org/handler-tls`
+- `gnalloy.org/gnalloy`
 - `gnalloy.org/transport-http3`
 - `gnalloy.org/transport-quic`
 

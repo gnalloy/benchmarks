@@ -19,7 +19,13 @@ Run focused tests while working on a small behavior change:
 GOWORK=off GOTOOLCHAIN=local go test ./... -run 'TestName' -count=1
 ```
 
-Current discovered test and benchmark entry points:
+## Discovered Test Entry Points
+
+This inventory is generated from the current `_test.go` files in this repository. It is intentionally complete so documentation review can catch stale test, benchmark, fuzz, and example coverage when code changes.
+
+Total discovered entry points: 116.
+
+### Tests (116)
 - `TestALPNProtocolsTrimsEmptyItems`
 - `TestAverageLatencyNanosKeepsPositiveFloor`
 - `TestAverageLatencyNanosUsesWindowMean`
@@ -32,6 +38,119 @@ Current discovered test and benchmark entry points:
 - `TestDefaultWorkerCountCapsLinuxEpoll`
 - `TestDefaultWorkerCountCapsLinuxIOUring`
 - `TestDefaultWorkerCountCapsWindowsIOCP`
+- `TestDefaultWorkerCountKeepsNonIOCPParallelism`
+- `TestDefaultWorkerCountNormalizesInvalidCPUCount`
+- `TestElapsedLatencyNanosIsPositive`
+- `TestHTTP1RawHandlerBatchesResponsesFromOneRead`
+- `TestHTTP1RawHandlerHandlesFragmentedRequest`
+- `TestHTTP1RawHandlerWritesFixedResponse`
+- `TestHTTP2MatrixSpecLoads`
+- `TestHTTP3MatrixSpecLoads`
+- `TestHTTPS1ALPNMatrixSpecLoads`
+- `TestInspectExternalHarnessesChecksExpandedCommand`
+- `TestLatencySamplingPredicate`
+- `TestLinuxHTTP1MatrixExternalHarnessesCanPassStrictGateWithRepoArtifacts`
+- `TestLinuxHTTP2MatrixSpecLoads`
+- `TestLinuxHTTP3MatrixSpecLoads`
+- `TestLinuxHTTPS1ALPNMatrixSpecLoads`
+- `TestLinuxTLSVersionMatrixSpecLoads`
+- `TestLinuxUDPEchoMatrixSpecLoads`
+- `TestLoadSpecAllowsSkippedExternalScenarioWithoutCommand`
+- `TestLoadSpecRejectsInvalidScenario`
+- `TestLoadSpecRejectsNegativeSampling`
+- `TestLookupHotPathSuiteBuildsStableBenchdiffInputs`
+- `TestLookupRejectsUnknownSuite`
+- `TestParseConfig`
+- `TestParseConfigKeepsMinimumAutoReadBufferSize`
+- `TestParseConfigRejectsCipherSuitesForTLS13`
+- `TestParseConfigRejectsFixedBuffersWithoutMmap`
+- `TestParseConfigRejectsHTTP1ModeForHTTP2`
+- `TestParseConfigRejectsHTTP2TLS11`
+- `TestParseConfigRejectsHTTP3TLS12`
+- `TestParseConfigRejectsInsecureCipherSuiteByDefault`
+- `TestParseConfigRejectsInvalidBackend`
+- `TestParseConfigRejectsInvalidTLSVersion`
+- `TestParseConfigRejectsMmapBlockSmallerThanReadBuffer`
+- `TestParseConfigRejectsMmapSizeOverflow`
+- `TestParseConfigRejectsNegativeLatencySampleRate`
+- `TestParseConfigRejectsNegativeReadBufferSize`
+- `TestParseConfigRejectsNegativeWarmupMessages`
+- `TestParseConfigRejectsNegativeWorkers`
+- `TestParseConfigRejectsUnsupportedProtocol`
+- `TestParseConfigResolvesAutoReadBufferSize`
+- `TestParseConfigResolvesAutoWorkers`
+- `TestParseConfigResolvesNativePerformanceFlags`
+- `TestParseConfigSupportsCipherSuites`
+- `TestParseConfigSupportsHTTP1RawMode`
+- `TestParseConfigSupportsHTTP2Family`
+- `TestParseConfigSupportsHTTP3`
+- `TestParseConfigSupportsHTTPS1ALPN`
+- `TestParseConfigSupportsInsecureCipherSuiteOptIn`
+- `TestParseConfigSupportsTLSVersions`
+- `TestParseConfigSupportsUDPEcho`
+- `TestParseGoBenchOutputTracksPackage`
+- `TestParseScenarioStats`
+- `TestParseScenarioStatsParsesJavaDuration`
+- `TestPathCommandCandidatesAddsWindowsExecutableSuffix`
+- `TestRequestHeaderBlockUsesStaticHPACKFields`
+- `TestResolveBenchmarkSelectionKeepsExplicitOverrides`
+- `TestResolveBenchmarkSelectionRejectsUnknownSuite`
+- `TestResolveBenchmarkSelectionUsesSuiteDefaults`
+- `TestResponseBytesUsesRequestedPayload`
+- `TestRunBenchmarkHTTP1`
+- `TestRunBenchmarkHTTP2`
+- `TestRunBenchmarkHTTPS1`
+- `TestRunBenchmarkHTTPS2ALPN`
+- `TestRunBenchmarkHTTPS2SustainedLoad`
+- `TestRunBenchmarkRejectsInvalidConfig`
+- `TestRunBenchmarkReportsUnsupportedPlatform`
+- `TestRunBenchmarkTCPEcho`
+- `TestRunBenchmarkUDPEcho`
+- `TestRunLoadHTTP1`
+- `TestRunLoadHTTP2Cleartext`
+- `TestRunLoadHTTP2TLSALPN`
+- `TestRunLoadHTTP3QUIC`
+- `TestRunLoadHTTPS1ALPN`
+- `TestRunLoadTimeoutClosesBlockedClients`
+- `TestRunnerCapturesCommandOutput`
+- `TestRunnerDryRunProducesSkippedResults`
+- `TestRunnerExpandsScenarioVariables`
+- `TestRunnerRepeatsScenarioAndDropsWarmupOutput`
+- `TestRunnerSkipsScenarioMarkedSkip`
+- `TestSelfSignedCertificatesDeduplicatesAlgorithms`
+- `TestSelfSignedCertificateSupportsIPName`
+- `TestSelfSignedCertificateSupportsRSA`
+- `TestSelfSignedCertificateUsesDefaultServerName`
+- `TestServerStateCountsSplitRequests`
+- `TestServerTLSConfigUsesTLS13`
+- `TestSummarizeLatencySamples`
+- `TestTCPMatrixIncludesOptimizedIOUringScenario`
+- `TestTCPMatrixSpecLoads`
+- `TestTLSConfigUsesCipherSuites`
+- `TestTLSConfigUsesSelectedVersion`
+- `TestTLSVersionMatrixSpecLoads`
+- `TestUDPEchoMatrixSpecLoads`
+- `TestValidateExternalHarnessesAcceptsReadyCommand`
+- `TestValidateExternalHarnessesChecksGnalloyParityHarness`
+- `TestValidateExternalHarnessesChecksJavaJarArgument`
+- `TestValidateExternalHarnessesRejectsSkippedScenario`
+- `TestWindowsHTTP1MatrixExternalHarnessesCanPassStrictGateWithRepoArtifacts`
+- `TestWindowsTCPMatrixExternalHarnessesCanPassStrictGateWithRepoArtifacts`
+- `TestWindowsTCPMatrixSpecLoads`
+- `TestWriteBenchmarkResult`
+- `TestWriteHTTP3BenchmarkResultUsesRFC9000Backend`
+- `TestWriteJSONReport`
+- `TestWriteMarkdownIncludesComparisonRows`
+- `TestWriteMarkdownReportIncludesMachineAndScenario`
+
+### Benchmarks (0)
+- No Benchmark functions are currently declared.
+
+### Fuzz Targets (0)
+- No Fuzz targets are currently declared.
+
+### Examples (0)
+- No Example functions are currently declared.
 
 ## Race Checks
 

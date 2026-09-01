@@ -7,7 +7,7 @@ require (
 	gnalloy.org/codec-http1 v0.0.0-20260831155325-667cf0239537
 	gnalloy.org/codec-http2 v0.0.0-20260831155500-3f718673813f
 	gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81
-	gnalloy.org/gnalloy v0.0.0-20260901141449-d065aaa7d8e4
+	gnalloy.org/gnalloy v0.0.0-20260901142914-2e8a30a886ec
 	gnalloy.org/handler-tls v0.0.0-20260831160137-72e45bfc3101
 	gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f
 	gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b

@@ -29,6 +29,8 @@ type config struct {
 	MaxMessagesPerRead        int
 	EventBatchSize            int
 	TCPEchoMode               string
+	FlushStrategyName         string
+	FlushStrategy             channel.FlushStrategy
 	TCPEchoExecutorWorkers    int
 	TCPEchoExecutorQueueSize  int
 	BossCPUs                  string
@@ -56,22 +58,23 @@ type config struct {
 
 func parseConfig(args []string) (config, error) {
 	cfg := config{
-		Protocol:       "tcp-echo",
-		Addr:           "127.0.0.1:0",
-		Payload:        1024,
-		Connections:    256,
-		Messages:       100000,
-		Timeout:        5 * time.Minute,
-		BackendName:    "default",
-		Boss:           1,
-		Workers:        0,
-		ReadBufferSize: 0,
-		MmapBlockSize:  4096,
-		MmapBlocks:     4096,
-		TCPEchoMode:    defaultTCPEchoMode,
-		ALPN:           "http/1.1",
-		TLSVersion:     defaultTLSVersion,
-		HTTP1Mode:      defaultHTTP1Mode,
+		Protocol:          "tcp-echo",
+		Addr:              "127.0.0.1:0",
+		Payload:           1024,
+		Connections:       256,
+		Messages:          100000,
+		Timeout:           5 * time.Minute,
+		BackendName:       "default",
+		Boss:              1,
+		Workers:           0,
+		ReadBufferSize:    0,
+		MmapBlockSize:     4096,
+		MmapBlocks:        4096,
+		TCPEchoMode:       defaultTCPEchoMode,
+		FlushStrategyName: defaultFlushStrategyName,
+		ALPN:              "http/1.1",
+		TLSVersion:        defaultTLSVersion,
+		HTTP1Mode:         defaultHTTP1Mode,
 	}
 	fs := flag.NewFlagSet("gnalloy-bench", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -88,6 +91,7 @@ func parseConfig(args []string) (config, error) {
 	fs.IntVar(&cfg.MaxMessagesPerRead, "max-messages-per-read", cfg.MaxMessagesPerRead, "per-read event message budget; 0 uses channel default")
 	fs.IntVar(&cfg.EventBatchSize, "event-batch-size", cfg.EventBatchSize, "poller events handled per EventLoop poll; 0 uses transport default")
 	fs.StringVar(&cfg.TCPEchoMode, "tcp-echo-mode", cfg.TCPEchoMode, "TCP echo write mode: direct, read-complete or owner-executor")
+	fs.StringVar(&cfg.FlushStrategyName, "flush-strategy", cfg.FlushStrategyName, "channel flush strategy: immediate, read-complete or event-loop-batch")
 	fs.IntVar(&cfg.TCPEchoExecutorWorkers, "tcp-echo-executor-workers", cfg.TCPEchoExecutorWorkers, "TCP echo executor workers for executor modes; 0 uses GOMAXPROCS")
 	fs.IntVar(&cfg.TCPEchoExecutorQueueSize, "tcp-echo-executor-queue-size", cfg.TCPEchoExecutorQueueSize, "TCP echo executor queue size per worker; 0 uses default")
 	fs.StringVar(&cfg.BossCPUs, "boss-cpus", cfg.BossCPUs, "comma-separated CPU ids for boss EventLoops; empty disables affinity")
@@ -158,6 +162,12 @@ func (c *config) resolve() error {
 	if c.MaxMessagesPerRead == 0 {
 		c.MaxMessagesPerRead = channel.OptionMaxMessagesPerRead.Default()
 	}
+	flushStrategyName, flushStrategy, err := normalizeFlushStrategy(c.FlushStrategyName)
+	if err != nil {
+		return err
+	}
+	c.FlushStrategyName = flushStrategyName
+	c.FlushStrategy = flushStrategy
 	mode, err := normalizeTCPEchoMode(c.TCPEchoMode)
 	if err != nil {
 		return err

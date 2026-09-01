@@ -28,6 +28,7 @@ func TestParseConfig(t *testing.T) {
 		"-max-messages-per-read", "5",
 		"-event-batch-size", "7",
 		"-tcp-echo-mode", "owner-executor",
+		"-flush-strategy", "immediate",
 		"-tcp-echo-executor-workers", "3",
 		"-tcp-echo-executor-queue-size", "11",
 		"-boss-cpus", "0",
@@ -48,6 +49,9 @@ func TestParseConfig(t *testing.T) {
 	}
 	if cfg.TCPEchoMode != tcpEchoModeOwnerExecutor || cfg.TCPEchoExecutorWorkers != 3 || cfg.TCPEchoExecutorQueueSize != 11 {
 		t.Fatalf("tcp echo config=%+v", cfg)
+	}
+	if cfg.FlushStrategyName != flushStrategyImmediate || cfg.FlushStrategy != channel.FlushImmediate {
+		t.Fatalf("flush strategy=%s/%d, want immediate", cfg.FlushStrategyName, cfg.FlushStrategy)
 	}
 	if !cfg.ReusePort {
 		t.Fatalf("reuseport=%v, want true", cfg.ReusePort)
@@ -113,6 +117,28 @@ func TestParseConfigSupportsTCPEchoModes(t *testing.T) {
 	}
 }
 
+func TestParseConfigSupportsFlushStrategies(t *testing.T) {
+	tests := []struct {
+		name string
+		want channel.FlushStrategy
+	}{
+		{name: flushStrategyImmediate, want: channel.FlushImmediate},
+		{name: flushStrategyReadComplete, want: channel.FlushOnReadComplete},
+		{name: flushStrategyEventLoopBatch, want: channel.FlushOnEventLoopBatch},
+		{name: "batch", want: channel.FlushOnEventLoopBatch},
+	}
+
+	for _, tt := range tests {
+		cfg, err := parseConfig([]string{"-flush-strategy", tt.name})
+		if err != nil {
+			t.Fatalf("strategy %s: %v", tt.name, err)
+		}
+		if cfg.FlushStrategy != tt.want {
+			t.Fatalf("strategy=%s/%d, want %d", cfg.FlushStrategyName, cfg.FlushStrategy, tt.want)
+		}
+	}
+}
+
 func TestParseConfigResolvesDefaultTCPEchoExecutor(t *testing.T) {
 	cfg, err := parseConfig([]string{})
 	if err != nil {
@@ -127,10 +153,20 @@ func TestParseConfigResolvesDefaultTCPEchoExecutor(t *testing.T) {
 	if cfg.TCPEchoExecutorQueueSize != defaultTCPEchoExecutorQueueSize {
 		t.Fatalf("tcpEchoExecutorQueueSize=%d, want %d", cfg.TCPEchoExecutorQueueSize, defaultTCPEchoExecutorQueueSize)
 	}
+	if cfg.FlushStrategyName != defaultFlushStrategyName || cfg.FlushStrategy != channel.FlushOnEventLoopBatch {
+		t.Fatalf("flush strategy=%s/%d, want event-loop-batch", cfg.FlushStrategyName, cfg.FlushStrategy)
+	}
 }
 
 func TestParseConfigRejectsInvalidTCPEchoMode(t *testing.T) {
 	_, err := parseConfig([]string{"-tcp-echo-mode", "inline"})
+	if !errors.Is(err, errInvalidConfig) {
+		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
+	}
+}
+
+func TestParseConfigRejectsInvalidFlushStrategy(t *testing.T) {
+	_, err := parseConfig([]string{"-flush-strategy", "spin"})
 	if !errors.Is(err, errInvalidConfig) {
 		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
 	}

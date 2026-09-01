@@ -87,6 +87,7 @@ func bindEchoServer(ctx context.Context, cfg config, boss *transport.EventLoopGr
 		Group(boss, workers).
 		Transport(tcp.NewTransport(tcpConfig)).
 		ChildOption(channel.OptionMaxMessagesPerRead.Assignment(cfg.MaxMessagesPerRead)).
+		ChildOption(channel.OptionFlushStrategy.Assignment(cfg.FlushStrategy)).
 		ChildInitializer(func(ch channel.Channel) error {
 			handler, err := newTCPEchoHandler(cfg, echoExecutor)
 			if err != nil {

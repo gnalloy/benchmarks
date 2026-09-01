@@ -7,11 +7,11 @@ require (
 	gnalloy.org/codec-http1 v0.0.0-20260831155325-667cf0239537
 	gnalloy.org/codec-http2 v0.0.0-20260831155500-3f718673813f
 	gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81
-	gnalloy.org/gnalloy v0.0.0-20260901151941-23320d3e4d3c
+	gnalloy.org/gnalloy v0.0.0-20260901173305-c5aafaacc185
 	gnalloy.org/handler-tls v0.0.0-20260831160137-72e45bfc3101
 	gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f
 	gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b
-	gnalloy.org/transport-tcp v0.0.0-20260831155913-79a7527f9682
+	gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3
 	gnalloy.org/transport-udp v0.0.0-20260831155925-cf3f122dae01
 )
 

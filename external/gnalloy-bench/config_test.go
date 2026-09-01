@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"gnalloy.org/gnalloy/channel"
 	"gnalloy.org/gnalloy/transport"
 	handlertls "gnalloy.org/handler-tls"
 )
@@ -24,8 +25,17 @@ func TestParseConfig(t *testing.T) {
 		"-boss", "1",
 		"-workers", "2",
 		"-read-buffer-size", "8192",
+		"-max-messages-per-read", "5",
+		"-event-batch-size", "7",
+		"-tcp-echo-mode", "owner-executor",
+		"-tcp-echo-executor-workers", "3",
+		"-tcp-echo-executor-queue-size", "11",
+		"-boss-cpus", "0",
+		"-worker-cpus", "1,2",
 		"-reuseport",
 		"-warmup-messages", "7",
+		"-cpuprofile", "cpu.pprof",
+		"-trace", "runtime.trace",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -33,14 +43,29 @@ func TestParseConfig(t *testing.T) {
 	if cfg.Payload != 32 || cfg.Connections != 2 || cfg.Messages != 3 || cfg.Timeout != 2*time.Second {
 		t.Fatalf("cfg=%+v", cfg)
 	}
-	if cfg.Boss != 1 || cfg.Workers != 2 || cfg.ReadBufferSize != 8192 || backendLabel(cfg.Backend) != "std" {
+	if cfg.Boss != 1 || cfg.Workers != 2 || cfg.ReadBufferSize != 8192 || cfg.MaxMessagesPerRead != 5 || cfg.EventBatchSize != 7 || backendLabel(cfg.Backend) != "std" {
 		t.Fatalf("cfg=%+v", cfg)
+	}
+	if cfg.TCPEchoMode != tcpEchoModeOwnerExecutor || cfg.TCPEchoExecutorWorkers != 3 || cfg.TCPEchoExecutorQueueSize != 11 {
+		t.Fatalf("tcp echo config=%+v", cfg)
 	}
 	if !cfg.ReusePort {
 		t.Fatalf("reuseport=%v, want true", cfg.ReusePort)
 	}
 	if cfg.WarmupMessages != 7 {
 		t.Fatalf("warmupMessages=%d, want 7", cfg.WarmupMessages)
+	}
+	if cfg.CPUProfile != "cpu.pprof" {
+		t.Fatalf("cpuProfile=%q, want cpu.pprof", cfg.CPUProfile)
+	}
+	if cfg.RuntimeTrace != "runtime.trace" {
+		t.Fatalf("runtimeTrace=%q, want runtime.trace", cfg.RuntimeTrace)
+	}
+	if cfg.BossCPUs != "0" || len(cfg.BossCPUSet) != 1 || cfg.BossCPUSet[0] != 0 {
+		t.Fatalf("boss CPU set=%q/%v, want 0/[0]", cfg.BossCPUs, cfg.BossCPUSet)
+	}
+	if cfg.WorkerCPUs != "1,2" || len(cfg.WorkerCPUSet) != 2 || cfg.WorkerCPUSet[0] != 1 || cfg.WorkerCPUSet[1] != 2 {
+		t.Fatalf("worker CPU set=%q/%v, want 1,2/[1 2]", cfg.WorkerCPUs, cfg.WorkerCPUSet)
 	}
 	if cfg.ALPN != "http/1.1" {
 		t.Fatalf("alpn=%q, want http/1.1", cfg.ALPN)
@@ -70,6 +95,54 @@ func TestParseConfigSupportsHTTP1RawMode(t *testing.T) {
 	}
 	if cfg.HTTP1Mode != http1ModeRaw {
 		t.Fatalf("http1Mode=%q, want raw", cfg.HTTP1Mode)
+	}
+}
+
+func TestParseConfigSupportsTCPEchoModes(t *testing.T) {
+	for _, mode := range []string{tcpEchoModeDirect, tcpEchoModeReadComplete, tcpEchoModeOwnerExecutor} {
+		cfg, err := parseConfig([]string{
+			"-protocol", "tcp-echo",
+			"-tcp-echo-mode", mode,
+		})
+		if err != nil {
+			t.Fatalf("mode %s: %v", mode, err)
+		}
+		if cfg.TCPEchoMode != mode {
+			t.Fatalf("mode=%q, want %q", cfg.TCPEchoMode, mode)
+		}
+	}
+}
+
+func TestParseConfigResolvesDefaultTCPEchoExecutor(t *testing.T) {
+	cfg, err := parseConfig([]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.TCPEchoMode != defaultTCPEchoMode {
+		t.Fatalf("tcpEchoMode=%q, want %q", cfg.TCPEchoMode, defaultTCPEchoMode)
+	}
+	if cfg.TCPEchoExecutorWorkers != runtime.GOMAXPROCS(0) {
+		t.Fatalf("tcpEchoExecutorWorkers=%d, want GOMAXPROCS", cfg.TCPEchoExecutorWorkers)
+	}
+	if cfg.TCPEchoExecutorQueueSize != defaultTCPEchoExecutorQueueSize {
+		t.Fatalf("tcpEchoExecutorQueueSize=%d, want %d", cfg.TCPEchoExecutorQueueSize, defaultTCPEchoExecutorQueueSize)
+	}
+}
+
+func TestParseConfigRejectsInvalidTCPEchoMode(t *testing.T) {
+	_, err := parseConfig([]string{"-tcp-echo-mode", "inline"})
+	if !errors.Is(err, errInvalidConfig) {
+		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
+	}
+}
+
+func TestParseConfigRejectsTCPEchoModeForHTTP1(t *testing.T) {
+	_, err := parseConfig([]string{
+		"-protocol", "http1",
+		"-tcp-echo-mode", tcpEchoModeReadComplete,
+	})
+	if !errors.Is(err, errInvalidConfig) {
+		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
 	}
 }
 
@@ -301,6 +374,16 @@ func TestParseConfigKeepsMinimumAutoReadBufferSize(t *testing.T) {
 	}
 }
 
+func TestParseConfigResolvesDefaultMaxMessagesPerRead(t *testing.T) {
+	cfg, err := parseConfig([]string{"-max-messages-per-read", "0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxMessagesPerRead != channel.OptionMaxMessagesPerRead.Default() {
+		t.Fatalf("maxMessagesPerRead=%d, want %d", cfg.MaxMessagesPerRead, channel.OptionMaxMessagesPerRead.Default())
+	}
+}
+
 func TestDefaultWorkerCountCapsWindowsIOCP(t *testing.T) {
 	got := defaultWorkerCount(workerSizingInput{
 		GOOS:       "windows",
@@ -374,6 +457,33 @@ func TestParseConfigRejectsNegativeReadBufferSize(t *testing.T) {
 	_, err := parseConfig([]string{"-read-buffer-size", "-1"})
 	if !errors.Is(err, errInvalidConfig) {
 		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
+	}
+}
+
+func TestParseConfigRejectsNegativeMaxMessagesPerRead(t *testing.T) {
+	_, err := parseConfig([]string{"-max-messages-per-read", "-1"})
+	if !errors.Is(err, errInvalidConfig) {
+		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
+	}
+}
+
+func TestParseConfigRejectsNegativeEventBatchSize(t *testing.T) {
+	_, err := parseConfig([]string{"-event-batch-size", "-1"})
+	if !errors.Is(err, errInvalidConfig) {
+		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
+	}
+}
+
+func TestParseConfigRejectsInvalidCPUSet(t *testing.T) {
+	for _, args := range [][]string{
+		{"-boss-cpus", "-1"},
+		{"-worker-cpus", "0,,1"},
+		{"-worker-cpus", "x"},
+	} {
+		_, err := parseConfig(args)
+		if !errors.Is(err, errInvalidConfig) {
+			t.Fatalf("args=%v err=%v, want %v", args, err, errInvalidConfig)
+		}
 	}
 }
 

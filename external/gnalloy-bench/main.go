@@ -19,6 +19,16 @@ func runCLI(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	stopProfile, err := startCPUProfile(cfg.CPUProfile)
+	if err != nil {
+		return err
+	}
+	defer stopProfile()
+	stopTrace, err := startRuntimeTrace(cfg.RuntimeTrace)
+	if err != nil {
+		return err
+	}
+	defer stopTrace()
 	result, err := runBenchmark(context.Background(), cfg)
 	if result.TotalRequests > 0 {
 		writeBenchmarkResult(stdout, cfg, result)

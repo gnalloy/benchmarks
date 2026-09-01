@@ -20,6 +20,8 @@ func TestParseConfig(t *testing.T) {
 		"-timeout", "2s",
 		"-latency-sample-rate", "2",
 		"-warmup-messages", "7",
+		"-cpuprofile", "cpu.pprof",
+		"-trace", "runtime.trace",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -32,6 +34,12 @@ func TestParseConfig(t *testing.T) {
 	}
 	if cfg.WarmupMessages != 7 {
 		t.Fatalf("warmupMessages=%d, want 7", cfg.WarmupMessages)
+	}
+	if cfg.CPUProfile != "cpu.pprof" {
+		t.Fatalf("cpuProfile=%q, want cpu.pprof", cfg.CPUProfile)
+	}
+	if cfg.RuntimeTrace != "runtime.trace" {
+		t.Fatalf("runtimeTrace=%q, want runtime.trace", cfg.RuntimeTrace)
 	}
 }
 

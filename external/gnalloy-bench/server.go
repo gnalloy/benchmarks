@@ -15,10 +15,11 @@ import (
 const shutdownTimeout = 5 * time.Second
 
 type echoServer struct {
-	addr    string
-	server  bootstrap.Server
-	boss    *transport.EventLoopGroup
-	workers *transport.EventLoopGroup
+	addr         string
+	server       bootstrap.Server
+	boss         *transport.EventLoopGroup
+	workers      *transport.EventLoopGroup
+	echoExecutor *tcpEchoExecutorGroup
 }
 
 func startEchoServer(ctx context.Context, cfg config) (*echoServer, error) {
@@ -29,12 +30,18 @@ func startEchoServer(ctx context.Context, cfg config) (*echoServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	server, err := bindEchoServer(ctx, cfg, boss, workers)
+	echoExecutor, err := newTCPEchoExecutorForConfig(cfg)
 	if err != nil {
 		shutdownGroups(boss, workers)
 		return nil, err
 	}
-	return &echoServer{addr: server.Addr(), server: server, boss: boss, workers: workers}, nil
+	server, err := bindEchoServer(ctx, cfg, boss, workers, echoExecutor)
+	if err != nil {
+		shutdownTCPEchoExecutor(echoExecutor)
+		shutdownGroups(boss, workers)
+		return nil, err
+	}
+	return &echoServer{addr: server.Addr(), server: server, boss: boss, workers: workers, echoExecutor: echoExecutor}, nil
 }
 
 func newGroups(cfg config) (*transport.EventLoopGroup, *transport.EventLoopGroup, error) {
@@ -44,15 +51,19 @@ func newGroups(cfg config) (*transport.EventLoopGroup, *transport.EventLoopGroup
 		SQPoll:          cfg.IOUringSQPoll,
 	}
 	boss, err := transport.NewEventLoopGroup(transport.EventLoopGroupConfig{
-		Size:         cfg.Boss,
-		PollerConfig: pollerConfig,
+		Size:           cfg.Boss,
+		PollerConfig:   pollerConfig,
+		EventBatchSize: cfg.EventBatchSize,
+		CPUAffinity:    cfg.BossCPUSet,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("create boss group: %w", err)
 	}
 	workers, err := transport.NewEventLoopGroup(transport.EventLoopGroupConfig{
-		Size:         cfg.Workers,
-		PollerConfig: pollerConfig,
+		Size:           cfg.Workers,
+		PollerConfig:   pollerConfig,
+		EventBatchSize: cfg.EventBatchSize,
+		CPUAffinity:    cfg.WorkerCPUSet,
 	})
 	if err != nil {
 		_ = boss.Close()
@@ -61,7 +72,7 @@ func newGroups(cfg config) (*transport.EventLoopGroup, *transport.EventLoopGroup
 	return boss, workers, nil
 }
 
-func bindEchoServer(ctx context.Context, cfg config, boss *transport.EventLoopGroup, workers *transport.EventLoopGroup) (bootstrap.Server, error) {
+func bindEchoServer(ctx context.Context, cfg config, boss *transport.EventLoopGroup, workers *transport.EventLoopGroup, echoExecutor *tcpEchoExecutorGroup) (bootstrap.Server, error) {
 	tcpConfig := tcp.DefaultConfig()
 	tcpConfig.ReadBufferSize = cfg.ReadBufferSize
 	tcpConfig.ReusePort = cfg.ReusePort
@@ -75,8 +86,13 @@ func bindEchoServer(ctx context.Context, cfg config, boss *transport.EventLoopGr
 	return bootstrap.NewServerBootstrap().
 		Group(boss, workers).
 		Transport(tcp.NewTransport(tcpConfig)).
+		ChildOption(channel.OptionMaxMessagesPerRead.Assignment(cfg.MaxMessagesPerRead)).
 		ChildInitializer(func(ch channel.Channel) error {
-			return ch.Pipeline().AddLast("echo", echoHandler{})
+			handler, err := newTCPEchoHandler(cfg, echoExecutor)
+			if err != nil {
+				return err
+			}
+			return ch.Pipeline().AddLast("echo", handler)
 		}).
 		BindContext(ctx, cfg.Addr)
 }
@@ -88,6 +104,7 @@ func (s *echoServer) stop() {
 	if s.server != nil {
 		_ = s.server.Close()
 	}
+	shutdownTCPEchoExecutor(s.echoExecutor)
 	shutdownGroups(s.boss, s.workers)
 }
 
@@ -99,19 +116,15 @@ func shutdownGroups(groups ...*transport.EventLoopGroup) {
 	}
 }
 
-type echoHandler struct{}
-
-func (echoHandler) ChannelRead(ctx *channel.HandlerContext, msg any) {
-	buf, ok := msg.(buffer.ByteBuf)
-	if !ok {
-		ctx.FireChannelRead(msg)
-		return
+func newTCPEchoExecutorForConfig(cfg config) (*tcpEchoExecutorGroup, error) {
+	if !tcpEchoModeUsesExecutor(cfg.TCPEchoMode) {
+		return nil, nil
 	}
-	if err := ctx.WriteAndFlush(buf); err != nil {
-		ctx.FireExceptionCaught(err)
-	}
+	return newTCPEchoExecutorGroup(cfg.TCPEchoExecutorWorkers, cfg.TCPEchoExecutorQueueSize)
 }
 
-func (echoHandler) ExceptionCaught(ctx *channel.HandlerContext, _ error) {
-	_ = ctx.Close()
+func shutdownTCPEchoExecutor(group *tcpEchoExecutorGroup) {
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	_ = group.shutdown(ctx)
 }

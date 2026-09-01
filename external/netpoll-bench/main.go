@@ -26,6 +26,8 @@ type config struct {
 	Timeout           time.Duration
 	LatencySampleRate int
 	WarmupMessages    int
+	CPUProfile        string
+	RuntimeTrace      string
 }
 
 type benchResult struct {
@@ -50,6 +52,16 @@ func runCLI(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	stopProfile, err := startCPUProfile(cfg.CPUProfile)
+	if err != nil {
+		return err
+	}
+	defer stopProfile()
+	stopTrace, err := startRuntimeTrace(cfg.RuntimeTrace)
+	if err != nil {
+		return err
+	}
+	defer stopTrace()
 	result, err := runBenchmark(context.Background(), cfg)
 	if result.TotalRequests > 0 {
 		writeBenchmarkResult(stdout, cfg, result)
@@ -76,6 +88,8 @@ func parseConfig(args []string) (config, error) {
 	fs.DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "overall timeout")
 	fs.IntVar(&cfg.LatencySampleRate, "latency-sample-rate", cfg.LatencySampleRate, "record one round-trip latency sample every N messages per connection; 0 disables latency sampling")
 	fs.IntVar(&cfg.WarmupMessages, "warmup-messages", cfg.WarmupMessages, "messages per connection sent before timed measurement; 0 disables in-process warmup")
+	fs.StringVar(&cfg.CPUProfile, "cpuprofile", cfg.CPUProfile, "write Go CPU profile to this file")
+	fs.StringVar(&cfg.RuntimeTrace, "trace", cfg.RuntimeTrace, "write Go runtime trace to this file")
 	if err := fs.Parse(args); err != nil {
 		return config{}, err
 	}

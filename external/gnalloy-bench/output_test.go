@@ -12,17 +12,25 @@ import (
 func TestWriteBenchmarkResult(t *testing.T) {
 	var out bytes.Buffer
 	writeBenchmarkResult(&out, config{
-		Protocol:          "tcp-echo",
-		TLSVersion:        "1.2",
-		CipherSuites:      "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-		Backend:           transport.BackendStd,
-		Boss:              1,
-		Workers:           2,
-		Payload:           8,
-		Connections:       1,
-		Messages:          2,
-		LatencySampleRate: 1,
-		WarmupMessages:    3,
+		Protocol:                 "tcp-echo",
+		TLSVersion:               "1.2",
+		CipherSuites:             "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+		Backend:                  transport.BackendStd,
+		TCPEchoMode:              tcpEchoModeOwnerExecutor,
+		TCPEchoExecutorWorkers:   3,
+		TCPEchoExecutorQueueSize: 11,
+		Boss:                     1,
+		Workers:                  2,
+		ReadBufferSize:           4096,
+		MaxMessagesPerRead:       5,
+		EventBatchSize:           7,
+		BossCPUs:                 "0",
+		WorkerCPUs:               "1,2",
+		Payload:                  8,
+		Connections:              1,
+		Messages:                 2,
+		LatencySampleRate:        1,
+		WarmupMessages:           3,
 	}, benchResult{
 		TotalRequests: 2,
 		Elapsed:       4 * time.Microsecond,
@@ -48,7 +56,7 @@ func TestWriteBenchmarkResult(t *testing.T) {
 		},
 	})
 	text := out.String()
-	for _, want := range []string{"framework=gnalloy", "backend=std", "http1Mode=", "boss=1", "workers=2", "tlsVersion=1.2", "cipherSuites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "negotiatedProtocol=http/1.1", "latencySampleRate=1", "warmupMessages=3", "latencySamples=2", "p99LatencyNs=200000", "rssBytes=4096", "gcCount=1", "total=2", "BenchmarkGnalloyTCPEcho-", "2 2000 ns/op"} {
+	for _, want := range []string{"framework=gnalloy", "backend=std", "http1Mode=", "tcpEchoMode=owner-executor", "tcpEchoExecutorWorkers=3", "tcpEchoExecutorQueueSize=11", "boss=1", "workers=2", "readBufferSize=4096", "maxMessagesPerRead=5", "eventBatchSize=7", "bossCPUs=0", "workerCPUs=1,2", "tlsVersion=1.2", "cipherSuites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "negotiatedProtocol=http/1.1", "latencySampleRate=1", "warmupMessages=3", "latencySamples=2", "p99LatencyNs=200000", "rssBytes=4096", "gcCount=1", "total=2", "BenchmarkGnalloyTCPEcho-", "2 2000 ns/op"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("missing %q in %q", want, text)
 		}
@@ -58,14 +66,16 @@ func TestWriteBenchmarkResult(t *testing.T) {
 func TestWriteHTTP3BenchmarkResultUsesRFC9000Backend(t *testing.T) {
 	var out bytes.Buffer
 	writeBenchmarkResult(&out, config{
-		Protocol:    "http3",
-		TLSVersion:  "1.3",
-		Backend:     transport.BackendEpoll,
-		Boss:        1,
-		Workers:     4,
-		Payload:     8,
-		Connections: 1,
-		Messages:    1,
+		Protocol:           "http3",
+		TLSVersion:         "1.3",
+		Backend:            transport.BackendEpoll,
+		Boss:               1,
+		Workers:            4,
+		ReadBufferSize:     4096,
+		MaxMessagesPerRead: 16,
+		Payload:            8,
+		Connections:        1,
+		Messages:           1,
 	}, benchResult{
 		TotalRequests: 1,
 		Elapsed:       time.Microsecond,
@@ -84,14 +94,16 @@ func TestWriteHTTP3BenchmarkResultUsesRFC9000Backend(t *testing.T) {
 func TestWriteQUICStreamBenchmarkResultUsesRFC9000Backend(t *testing.T) {
 	var out bytes.Buffer
 	writeBenchmarkResult(&out, config{
-		Protocol:    "quic-stream",
-		TLSVersion:  "1.3",
-		Backend:     transport.BackendEpoll,
-		Boss:        1,
-		Workers:     4,
-		Payload:     8,
-		Connections: 1,
-		Messages:    1,
+		Protocol:           "quic-stream",
+		TLSVersion:         "1.3",
+		Backend:            transport.BackendEpoll,
+		Boss:               1,
+		Workers:            4,
+		ReadBufferSize:     4096,
+		MaxMessagesPerRead: 16,
+		Payload:            8,
+		Connections:        1,
+		Messages:           1,
 	}, benchResult{
 		TotalRequests: 1,
 		Elapsed:       time.Microsecond,

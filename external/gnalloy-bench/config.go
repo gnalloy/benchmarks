@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"gnalloy.org/gnalloy/channel"
 	"gnalloy.org/gnalloy/transport"
 )
 
@@ -25,6 +26,15 @@ type config struct {
 	Boss                      int
 	Workers                   int
 	ReadBufferSize            int
+	MaxMessagesPerRead        int
+	EventBatchSize            int
+	TCPEchoMode               string
+	TCPEchoExecutorWorkers    int
+	TCPEchoExecutorQueueSize  int
+	BossCPUs                  string
+	WorkerCPUs                string
+	BossCPUSet                []int
+	WorkerCPUSet              []int
 	ReusePort                 bool
 	Mmap                      bool
 	MmapBlockSize             int
@@ -34,6 +44,8 @@ type config struct {
 	IOUringSQPoll             bool
 	LatencySampleRate         int
 	WarmupMessages            int
+	CPUProfile                string
+	RuntimeTrace              string
 	ALPN                      string
 	TLSVersion                string
 	CipherSuites              string
@@ -56,6 +68,7 @@ func parseConfig(args []string) (config, error) {
 		ReadBufferSize: 0,
 		MmapBlockSize:  4096,
 		MmapBlocks:     4096,
+		TCPEchoMode:    defaultTCPEchoMode,
 		ALPN:           "http/1.1",
 		TLSVersion:     defaultTLSVersion,
 		HTTP1Mode:      defaultHTTP1Mode,
@@ -72,6 +85,13 @@ func parseConfig(args []string) (config, error) {
 	fs.IntVar(&cfg.Boss, "boss", cfg.Boss, "boss event-loop count")
 	fs.IntVar(&cfg.Workers, "workers", cfg.Workers, "worker event-loop count; 0 selects a backend-aware default")
 	fs.IntVar(&cfg.ReadBufferSize, "read-buffer-size", cfg.ReadBufferSize, "per-read ByteBuf size; 0 selects max(payload, 4096)")
+	fs.IntVar(&cfg.MaxMessagesPerRead, "max-messages-per-read", cfg.MaxMessagesPerRead, "per-read event message budget; 0 uses channel default")
+	fs.IntVar(&cfg.EventBatchSize, "event-batch-size", cfg.EventBatchSize, "poller events handled per EventLoop poll; 0 uses transport default")
+	fs.StringVar(&cfg.TCPEchoMode, "tcp-echo-mode", cfg.TCPEchoMode, "TCP echo write mode: direct, read-complete or owner-executor")
+	fs.IntVar(&cfg.TCPEchoExecutorWorkers, "tcp-echo-executor-workers", cfg.TCPEchoExecutorWorkers, "TCP echo executor workers for executor modes; 0 uses GOMAXPROCS")
+	fs.IntVar(&cfg.TCPEchoExecutorQueueSize, "tcp-echo-executor-queue-size", cfg.TCPEchoExecutorQueueSize, "TCP echo executor queue size per worker; 0 uses default")
+	fs.StringVar(&cfg.BossCPUs, "boss-cpus", cfg.BossCPUs, "comma-separated CPU ids for boss EventLoops; empty disables affinity")
+	fs.StringVar(&cfg.WorkerCPUs, "worker-cpus", cfg.WorkerCPUs, "comma-separated CPU ids for worker EventLoops; empty disables affinity")
 	fs.BoolVar(&cfg.ReusePort, "reuseport", cfg.ReusePort, "enable SO_REUSEPORT when the platform supports it")
 	fs.BoolVar(&cfg.Mmap, "mmap", cfg.Mmap, "use one mmap allocator per worker event loop")
 	fs.IntVar(&cfg.MmapBlockSize, "mmap-block-size", cfg.MmapBlockSize, "mmap allocator block size")
@@ -81,6 +101,8 @@ func parseConfig(args []string) (config, error) {
 	fs.BoolVar(&cfg.IOUringSQPoll, "iouring-sqpoll", cfg.IOUringSQPoll, "enable io_uring SQPOLL")
 	fs.IntVar(&cfg.LatencySampleRate, "latency-sample-rate", cfg.LatencySampleRate, "record one round-trip latency sample every N messages per connection; 0 disables latency sampling")
 	fs.IntVar(&cfg.WarmupMessages, "warmup-messages", cfg.WarmupMessages, "messages per connection sent before timed measurement; 0 disables in-process warmup")
+	fs.StringVar(&cfg.CPUProfile, "cpuprofile", cfg.CPUProfile, "write Go CPU profile to this file")
+	fs.StringVar(&cfg.RuntimeTrace, "trace", cfg.RuntimeTrace, "write Go runtime trace to this file")
 	fs.StringVar(&cfg.ALPN, "alpn", cfg.ALPN, "comma-separated TLS ALPN protocols for HTTPS protocols")
 	fs.StringVar(&cfg.TLSVersion, "tls-version", cfg.TLSVersion, "TLS protocol version: 1.1, 1.2 or 1.3")
 	fs.StringVar(&cfg.CipherSuites, "cipher-suites", cfg.CipherSuites, "comma-separated TLS cipher suites using IANA/Java, OpenSSL or hexadecimal names")
@@ -133,6 +155,26 @@ func (c *config) resolve() error {
 	if c.ReadBufferSize == 0 {
 		c.ReadBufferSize = defaultReadBufferSize(c.Payload)
 	}
+	if c.MaxMessagesPerRead == 0 {
+		c.MaxMessagesPerRead = channel.OptionMaxMessagesPerRead.Default()
+	}
+	mode, err := normalizeTCPEchoMode(c.TCPEchoMode)
+	if err != nil {
+		return err
+	}
+	c.TCPEchoMode = mode
+	if c.TCPEchoExecutorWorkers == 0 {
+		c.TCPEchoExecutorWorkers = runtime.GOMAXPROCS(0)
+	}
+	if c.TCPEchoExecutorQueueSize == 0 {
+		c.TCPEchoExecutorQueueSize = defaultTCPEchoExecutorQueueSize
+	}
+	if c.BossCPUSet, err = parseCPUSet(c.BossCPUs); err != nil {
+		return err
+	}
+	if c.WorkerCPUSet, err = parseCPUSet(c.WorkerCPUs); err != nil {
+		return err
+	}
 	return c.validate()
 }
 
@@ -159,6 +201,21 @@ func (c config) validate() error {
 	}
 	if c.ReadBufferSize <= 0 {
 		return fmt.Errorf("%w: read-buffer-size must be positive", errInvalidConfig)
+	}
+	if c.MaxMessagesPerRead <= 0 {
+		return fmt.Errorf("%w: max-messages-per-read must be positive", errInvalidConfig)
+	}
+	if c.EventBatchSize < 0 {
+		return fmt.Errorf("%w: event-batch-size must not be negative", errInvalidConfig)
+	}
+	if c.TCPEchoMode != defaultTCPEchoMode && c.Protocol != "tcp-echo" {
+		return fmt.Errorf("%w: tcp-echo-mode requires tcp-echo protocol", errInvalidConfig)
+	}
+	if c.TCPEchoExecutorWorkers <= 0 {
+		return fmt.Errorf("%w: tcp-echo-executor-workers must be positive", errInvalidConfig)
+	}
+	if c.TCPEchoExecutorQueueSize <= 0 {
+		return fmt.Errorf("%w: tcp-echo-executor-queue-size must be positive", errInvalidConfig)
 	}
 	if c.Mmap && (c.MmapBlockSize <= 0 || c.MmapBlocks <= 0) {
 		return fmt.Errorf("%w: mmap block size and blocks must be positive", errInvalidConfig)

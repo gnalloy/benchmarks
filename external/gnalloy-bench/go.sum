@@ -30,6 +30,8 @@ gnalloy.org/gnalloy v0.0.0-20260901142914-2e8a30a886ec h1:de1vXzIj1wq8Eytq42fD12
 gnalloy.org/gnalloy v0.0.0-20260901142914-2e8a30a886ec/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
 gnalloy.org/gnalloy v0.0.0-20260901144930-70441b880577 h1:mRa3SyjGOMnjlQiHcN3W41npd0gcguBnFvslLSGrgSM=
 gnalloy.org/gnalloy v0.0.0-20260901144930-70441b880577/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
+gnalloy.org/gnalloy v0.0.0-20260901151941-23320d3e4d3c h1:tZ+c0fR3Tfdt6MPQ5M5PJalVp5DeXYaq7o7+7bCEz0w=
+gnalloy.org/gnalloy v0.0.0-20260901151941-23320d3e4d3c/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
 gnalloy.org/handler-tls v0.0.0-20260831160137-72e45bfc3101 h1:BoyOOs2cd53OhPA+Vb0O9X0T8oI52CdSBqZCD6MxMDk=
 gnalloy.org/handler-tls v0.0.0-20260831160137-72e45bfc3101/go.mod h1:KYkjLY+u83XcfJMvPE/bvTQIGAYodzsmcD1/iYDgYj0=
 gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f h1:5l35q8Bxsn+Xv022nJqF8GIoj3jU6xDKZplTu44VK2c=

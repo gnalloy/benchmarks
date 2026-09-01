@@ -4,32 +4,35 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.handler.codec.http3.Http3;
-import io.netty.handler.codec.http3.Http3ServerConnectionHandler;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.quic.InsecureQuicTokenHandler;
+import io.netty.handler.codec.quic.QuicServerCodecBuilder;
 import io.netty.handler.codec.quic.QuicSslContext;
 import io.netty.handler.codec.quic.QuicSslContextBuilder;
+import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
-final class Http3Server implements AutoCloseable {
+final class QuicStreamServer implements AutoCloseable {
     private static final long STREAM_WINDOW = 6L * 1024 * 1024;
     private static final long CONNECTION_WINDOW = 16L * 1024 * 1024;
 
     private final DatagramEventLoopResources resources;
     private final Channel channel;
 
-    private Http3Server(DatagramEventLoopResources resources, Channel channel) {
+    private QuicStreamServer(DatagramEventLoopResources resources, Channel channel) {
         this.resources = resources;
         this.channel = channel;
     }
 
-    static Http3Server start(Config config) throws Exception {
+    static QuicStreamServer start(Config config) throws Exception {
         DatagramEventLoopResources resources = DatagramEventLoopResources.create(config);
         try {
             ChannelHandler codec = serverCodec(config);
@@ -42,7 +45,7 @@ final class Http3Server implements AutoCloseable {
                     .bind(config.host(), config.port())
                     .sync()
                     .channel();
-            return new Http3Server(resources, channel);
+            return new QuicStreamServer(resources, channel);
         } catch (Throwable t) {
             resources.close();
             if (t instanceof InterruptedException interrupted) {
@@ -73,9 +76,9 @@ final class Http3Server implements AutoCloseable {
         SelfSignedCertificate certificate = new SelfSignedCertificate("gnalloy.local");
         QuicSslContext sslContext = QuicSslContextBuilder
                 .forServer(certificate.key(), null, certificate.cert())
-                .applicationProtocols(http3ApplicationProtocols(config))
+                .applicationProtocols(config.alpnProtocols().toArray(String[]::new))
                 .build();
-        return Http3.newQuicServerCodecBuilder()
+        return new QuicServerCodecBuilder()
                 .sslContext(sslContext)
                 .maxIdleTimeout(config.timeout().toMillis(), TimeUnit.MILLISECONDS)
                 .initialMaxData(CONNECTION_WINDOW)
@@ -83,21 +86,36 @@ final class Http3Server implements AutoCloseable {
                 .initialMaxStreamDataBidirectionalRemote(STREAM_WINDOW)
                 .initialMaxStreamDataUnidirectional(STREAM_WINDOW)
                 .initialMaxStreamsBidirectional(QuicLimits.bidirectionalStreamLimit(config))
-                .initialMaxStreamsUnidirectional(Http3.MIN_INITIAL_MAX_STREAMS_UNIDIRECTIONAL)
+                .initialMaxStreamsUnidirectional(0)
                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
                 .handler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel channel) {
-                        channel.pipeline().addLast(new Http3ServerConnectionHandler(new Http3ServerHandler(config.payload())));
+                        // 每条 QUIC 连接使用独立 pipeline，避免复用非 sharable handler。
+                    }
+                })
+                .streamHandler(new ChannelInitializer<QuicStreamChannel>() {
+                    @Override
+                    protected void initChannel(QuicStreamChannel channel) {
+                        channel.pipeline()
+                                .addLast(QuicStreamFrame.decoder())
+                                .addLast(new EchoHandler());
                     }
                 })
                 .build();
     }
 
-    static String[] http3ApplicationProtocols(Config config) {
-        if (config.alpnProtocols().isEmpty()) {
-            return Http3.supportedApplicationProtocols();
+    private static final class EchoHandler extends SimpleChannelInboundHandler<io.netty.buffer.ByteBuf> {
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, io.netty.buffer.ByteBuf payload) {
+            ctx.writeAndFlush(QuicStreamFrame.encode(ctx.alloc(), payload))
+                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT)
+                    .addListener(ChannelFutureListener.CLOSE);
         }
-        return config.alpnProtocols().toArray(String[]::new);
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            ctx.close();
+        }
     }
 }

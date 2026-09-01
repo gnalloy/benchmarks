@@ -49,7 +49,8 @@ record Config(
                 && !Objects.equals(protocol, "https1")
                 && !Objects.equals(protocol, "http2")
                 && !Objects.equals(protocol, "https2")
-                && !Objects.equals(protocol, "http3")) {
+                && !Objects.equals(protocol, "http3")
+                && !Objects.equals(protocol, "quic-stream")) {
             throw new IllegalArgumentException("netty-bench: unsupported protocol " + protocol);
         }
         if (backend == null) {
@@ -85,6 +86,15 @@ record Config(
         if (http3Family() && !alpnProtocols().contains("h3")) {
             throw new IllegalArgumentException("netty-bench: HTTP/3 requires ALPN h3");
         }
+        if (quicStreamFamily() && tlsVersion != TlsVersion.TLS13) {
+            throw new IllegalArgumentException("netty-bench: QUIC stream requires TLS 1.3");
+        }
+        if (quicStreamFamily() && !alpnProtocols().contains("gnalloy-quic")) {
+            throw new IllegalArgumentException("netty-bench: QUIC stream requires ALPN gnalloy-quic");
+        }
+        if (quicStreamFamily() && payload > QuicStreamFrame.MAX_PAYLOAD_SIZE) {
+            throw new IllegalArgumentException("netty-bench: QUIC stream payload exceeds " + QuicStreamFrame.MAX_PAYLOAD_SIZE + " bytes");
+        }
         if (!tlsEnabled() && !cipherSuiteList().isEmpty()) {
             throw new IllegalArgumentException("netty-bench: cipher-suites require TLS");
         }
@@ -105,12 +115,16 @@ record Config(
         return Objects.equals(protocol, "http3");
     }
 
+    boolean quicStreamFamily() {
+        return Objects.equals(protocol, "quic-stream");
+    }
+
     boolean udpEcho() {
         return Objects.equals(protocol, "udp-echo");
     }
 
     boolean tlsEnabled() {
-        return Objects.equals(protocol, "https1") || Objects.equals(protocol, "https2") || http3Family();
+        return Objects.equals(protocol, "https1") || Objects.equals(protocol, "https2") || http3Family() || quicStreamFamily();
     }
 
     List<String> alpnProtocols() {
@@ -157,6 +171,9 @@ record Config(
         }
         if (Objects.equals(values.get("protocol"), "http3")) {
             return "h3";
+        }
+        if (Objects.equals(values.get("protocol"), "quic-stream")) {
+            return "gnalloy-quic";
         }
         return "http/1.1";
     }

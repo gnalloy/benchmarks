@@ -63,11 +63,6 @@ func InspectExternalHarnesses(spec Spec, options ExternalHarnessOptions) (Extern
 		report.ExternalScenarios++
 		if scenario.Skip {
 			report.Skipped++
-			report.Issues = append(report.Issues, ExternalHarnessIssue{
-				Scenario:  scenario.Name,
-				Framework: scenario.Framework,
-				Reason:    fmt.Sprintf("%s is skipped: %s", scenario.Name, scenario.SkipReason),
-			})
 			continue
 		}
 		if err := commandAvailable(scenario, options); err != nil {
@@ -98,7 +93,7 @@ func ValidateExternalHarnesses(spec Spec, options ExternalHarnessOptions) error 
 
 func externalFrameworkSet(frameworks []string) map[string]struct{} {
 	if len(frameworks) == 0 {
-		frameworks = []string{"netty", "gnet", "netpoll"}
+		frameworks = []string{"netty", "gnet", "fasthttp", "netpoll"}
 	}
 	out := make(map[string]struct{}, len(frameworks))
 	for _, framework := range frameworks {

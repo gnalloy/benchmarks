@@ -40,6 +40,7 @@ GOWORK=off GOTOOLCHAIN=local go test ./... -count=1
 ## 包结构
 - `gnalloy.org/benchmarks/benchdiff`（`benchdiff`）
 - `gnalloy.org/benchmarks/cmd/gnalloy-benchdiff`（`main`）
+- `gnalloy.org/benchmarks/cmd/gnalloy-parity`（`main`）
 - `gnalloy.org/benchmarks/external/internal/benchh2`（`benchh2`）
 - `gnalloy.org/benchmarks/external/internal/benchh3`（`benchh3`）
 - `gnalloy.org/benchmarks/external/internal/benchhttp`（`benchhttp`）
@@ -57,6 +58,7 @@ GOWORK=off GOTOOLCHAIN=local go test ./... -count=1
 ## 常见集成方式
 - 比较结果前先配置 scenario、protocol、payload size、concurrency、warmup、measured repetitions、timeout 与 report 输出。
 - throughput 与 latency 必须分开报告；不同主机采集的数据不能直接当成排名。
+- 使用 `cmd/gnalloy-parity -matrix linux-full` 或 `-matrix windows-full` 生成完整 TCP、UDP、QUIC、HTTP/1、HTTP/2、HTTP/3 与 TLS 对标矩阵。
 
 ## 当前公共入口
 

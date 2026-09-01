@@ -23,7 +23,7 @@ if [[ "${SKIP_BENCH}" != "1" ]]; then
 fi
 
 if [[ "${SKIP_EXTERNAL}" != "1" ]]; then
-  for module in external/gnalloy-bench external/gnet-bench external/netpoll-bench; do
+  for module in external/gnalloy-bench external/gnet-bench external/fasthttp-bench external/netpoll-bench; do
     (
       cd "${module}"
       go test ./... -count="${COUNT}"

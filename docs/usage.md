@@ -22,6 +22,17 @@ import "gnalloy.org/benchmarks"
 - Configure scenario, protocol, payload size, concurrency, warmup count, measured repetitions, timeout, and report output before comparing results.
 - Report throughput and latency separately. Do not compare numbers collected on different hosts as a ranking.
 
+## Full Parity Matrix
+
+Build external harnesses first, then run the built-in matrix from the workspace root that contains the `benchmarks` directory:
+
+```bash
+(cd benchmarks && GOWORK=off GOTOOLCHAIN=local go build -o external/bin/gnalloy-parity ./cmd/gnalloy-parity)
+./benchmarks/external/bin/gnalloy-parity -matrix linux-full -strict-external -format markdown -out benchmarks/reports/linux-full-parity.md -timeout 6h
+```
+
+The Linux matrix covers TCP, UDP, QUIC stream, HTTP/1.1, HTTP/2, HTTP/3, HTTPS TLS 1.1/1.2/1.3, Gnalloy, Netty, gnet, fasthttp, and netpoll. Illegal or unsupported combinations are recorded as skipped scenarios with explicit reasons. Executable scenarios pass a 15-minute harness timeout and use a 16-minute outer scenario guard.
+
 ## API Selection
 
 Use the API inventory to choose the exact constructor or option type for your protocol path:

@@ -40,6 +40,7 @@ It does not absorb neighboring module responsibilities. Core primitives stay in 
 ## Packages
 - `gnalloy.org/benchmarks/benchdiff` (`benchdiff`)
 - `gnalloy.org/benchmarks/cmd/gnalloy-benchdiff` (`main`)
+- `gnalloy.org/benchmarks/cmd/gnalloy-parity` (`main`)
 - `gnalloy.org/benchmarks/external/internal/benchh2` (`benchh2`)
 - `gnalloy.org/benchmarks/external/internal/benchh3` (`benchh3`)
 - `gnalloy.org/benchmarks/external/internal/benchhttp` (`benchhttp`)
@@ -57,6 +58,7 @@ It does not absorb neighboring module responsibilities. Core primitives stay in 
 ## Common Integration Pattern
 - Configure scenario, protocol, payload size, concurrency, warmup count, measured repetitions, timeout, and report output before comparing results.
 - Report throughput and latency separately. Do not compare numbers collected on different hosts as a ranking.
+- Use `cmd/gnalloy-parity -matrix linux-full` or `-matrix windows-full` to generate the full TCP, UDP, QUIC, HTTP/1, HTTP/2, HTTP/3, and TLS parity matrix.
 
 ## Current Public Entry Points
 

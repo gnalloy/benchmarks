@@ -59,6 +59,9 @@ final class BenchmarkOutput {
         if ("http3".equals(protocol)) {
             return "BenchmarkNettyHTTP3";
         }
+        if ("quic-stream".equals(protocol)) {
+            return "BenchmarkNettyQUICStream";
+        }
         if ("udp-echo".equals(protocol)) {
             return "BenchmarkNettyUDPEcho";
         }

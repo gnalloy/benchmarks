@@ -32,6 +32,7 @@ try {
         $externalModules = @(
             "external/gnalloy-bench",
             "external/gnet-bench",
+            "external/fasthttp-bench",
             "external/netpoll-bench"
         )
         foreach ($module in $externalModules) {
@@ -51,4 +52,3 @@ try {
     if ($null -eq $oldGoWork) { Remove-Item Env:\GOWORK -ErrorAction SilentlyContinue } else { $env:GOWORK = $oldGoWork }
     if ($null -eq $oldGoToolchain) { Remove-Item Env:\GOTOOLCHAIN -ErrorAction SilentlyContinue } else { $env:GOTOOLCHAIN = $oldGoToolchain }
 }
-

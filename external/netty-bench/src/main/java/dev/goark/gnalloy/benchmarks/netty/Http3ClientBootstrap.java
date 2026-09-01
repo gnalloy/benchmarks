@@ -32,7 +32,7 @@ final class Http3ClientBootstrap {
                 .initialMaxStreamDataBidirectionalLocal(6L * 1024 * 1024)
                 .initialMaxStreamDataBidirectionalRemote(6L * 1024 * 1024)
                 .initialMaxStreamDataUnidirectional(6L * 1024 * 1024)
-                .initialMaxStreamsBidirectional(Math.max(1024, config.connections() * 4L))
+                .initialMaxStreamsBidirectional(QuicLimits.bidirectionalStreamLimit(config))
                 .initialMaxStreamsUnidirectional(Http3.MIN_INITIAL_MAX_STREAMS_UNIDIRECTIONAL)
                 .build();
         return new Bootstrap()

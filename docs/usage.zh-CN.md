@@ -22,6 +22,17 @@ import "gnalloy.org/benchmarks"
 - 比较结果前先配置 scenario、protocol、payload size、concurrency、warmup、measured repetitions、timeout 与 report 输出。
 - throughput 与 latency 必须分开报告；不同主机采集的数据不能直接当成排名。
 
+## 完整对标矩阵
+
+先构建外部 harness，再从包含 `benchmarks` 目录的 workspace 根目录运行内置矩阵：
+
+```bash
+(cd benchmarks && GOWORK=off GOTOOLCHAIN=local go build -o external/bin/gnalloy-parity ./cmd/gnalloy-parity)
+./benchmarks/external/bin/gnalloy-parity -matrix linux-full -strict-external -format markdown -out benchmarks/reports/linux-full-parity.md -timeout 6h
+```
+
+Linux 矩阵覆盖 TCP、UDP、QUIC stream、HTTP/1.1、HTTP/2、HTTP/3、HTTPS TLS 1.1/1.2/1.3、Gnalloy、Netty、gnet、fasthttp 与 netpoll。非法或不支持的组合会记录为 skipped scenario，并保留明确原因。可执行场景向 harness 传入 15 分钟 timeout，并使用 16 分钟外层场景保护。
+
 ## API 选择
 
 通过 API 清单选择当前协议路径需要的具体构造函数或 option 类型：

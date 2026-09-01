@@ -107,6 +107,9 @@ func (c *config) resolve() error {
 	if c.Protocol == "http3" && c.ALPN == "http/1.1" {
 		c.ALPN = http3ALPNValue
 	}
+	if c.Protocol == "quic-stream" && c.ALPN == "http/1.1" {
+		c.ALPN = quicStreamALPNValue
+	}
 	tlsVersion, err := normalizeTLSVersion(c.TLSVersion)
 	if err != nil {
 		return err
@@ -135,7 +138,7 @@ func (c *config) resolve() error {
 
 func (c config) validate() error {
 	switch strings.TrimSpace(c.Protocol) {
-	case "tcp-echo", "udp-echo", "http1", "https1", "http2", "https2", "http3":
+	case "tcp-echo", "udp-echo", "http1", "https1", "http2", "https2", "http3", "quic-stream":
 	default:
 		return fmt.Errorf("%w: %s", errUnsupportedProtocol, c.Protocol)
 	}
@@ -186,6 +189,9 @@ func (c config) validate() error {
 	}
 	if c.Protocol == "http3" {
 		return ensureHTTP3Config(c)
+	}
+	if c.Protocol == "quic-stream" {
+		return ensureQUICStreamConfig(c)
 	}
 	return nil
 }

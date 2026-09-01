@@ -43,6 +43,8 @@ func runBenchmark(parent context.Context, cfg config) (benchResult, error) {
 		return runHTTP2Benchmark(ctx, cfg)
 	case "http3":
 		return runHTTP3Benchmark(ctx, cfg)
+	case "quic-stream":
+		return runQUICStreamBenchmark(ctx, cfg)
 	case "udp-echo":
 		return runUDPEchoBenchmark(ctx, cfg)
 	}

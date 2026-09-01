@@ -193,8 +193,25 @@ func TestParseConfigSupportsHTTP3(t *testing.T) {
 	}
 }
 
+func TestParseConfigSupportsQUICStream(t *testing.T) {
+	cfg, err := parseConfig([]string{"-protocol", "quic-stream"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Protocol != "quic-stream" || cfg.ALPN != "gnalloy-quic" || cfg.TLSVersion != "1.3" {
+		t.Fatalf("cfg=%+v, want quic-stream with gnalloy-quic/TLS1.3", cfg)
+	}
+}
+
 func TestParseConfigRejectsHTTP3TLS12(t *testing.T) {
 	_, err := parseConfig([]string{"-protocol", "http3", "-tls-version", "1.2"})
+	if !errors.Is(err, errInvalidConfig) {
+		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
+	}
+}
+
+func TestParseConfigRejectsQUICStreamTLS12(t *testing.T) {
+	_, err := parseConfig([]string{"-protocol", "quic-stream", "-tls-version", "1.2"})
 	if !errors.Is(err, errInvalidConfig) {
 		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
 	}

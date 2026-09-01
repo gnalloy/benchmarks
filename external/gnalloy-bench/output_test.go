@@ -80,3 +80,29 @@ func TestWriteHTTP3BenchmarkResultUsesRFC9000Backend(t *testing.T) {
 		}
 	}
 }
+
+func TestWriteQUICStreamBenchmarkResultUsesRFC9000Backend(t *testing.T) {
+	var out bytes.Buffer
+	writeBenchmarkResult(&out, config{
+		Protocol:    "quic-stream",
+		TLSVersion:  "1.3",
+		Backend:     transport.BackendEpoll,
+		Boss:        1,
+		Workers:     4,
+		Payload:     8,
+		Connections: 1,
+		Messages:    1,
+	}, benchResult{
+		TotalRequests: 1,
+		Elapsed:       time.Microsecond,
+		Throughput:    1000000,
+		NsPerOp:       1000,
+		Protocol:      "gnalloy-quic",
+	})
+	text := out.String()
+	for _, want := range []string{"protocol=quic-stream", "backend=rfc9000", "negotiatedProtocol=gnalloy-quic", "BenchmarkGnalloyQUICStream-"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("missing %q in %q", want, text)
+		}
+	}
+}

@@ -499,6 +499,77 @@ func TestLinuxUDPEchoMatrixSpecLoads(t *testing.T) {
 	}
 }
 
+func TestLinuxFullMatrixSpecLoads(t *testing.T) {
+	file, err := os.Open("linux-full-matrix.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	spec, err := LoadSpec(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spec.Scenarios) != 85 {
+		t.Fatalf("scenarios=%d, want linux full matrix scenarios", len(spec.Scenarios))
+	}
+	seen := map[string]bool{}
+	for _, scenario := range spec.Scenarios {
+		seen[scenario.Framework+" "+scenario.Protocol] = true
+		command := strings.Join(scenario.Command, " ")
+		if scenario.Framework == "netty" && !scenario.Skip {
+			if !strings.Contains(command, "--payload") || strings.Contains(command, " -payload ") {
+				t.Fatalf("netty command must use double-dash flags: %q", command)
+			}
+		}
+		if scenario.Protocol == "https2" && strings.Contains(command, " 1.1") {
+			t.Fatalf("https2 must not execute TLS 1.1: %q", command)
+		}
+		if (scenario.Protocol == "http3" || scenario.Protocol == "quic-stream") && strings.Contains(command, " 1.2") {
+			t.Fatalf("QUIC protocol must not execute TLS 1.2: %q", command)
+		}
+	}
+	for _, key := range []string{
+		"gnalloy tcp-echo", "gnalloy udp-echo", "gnalloy http3", "gnalloy quic-stream",
+		"netty tcp-echo", "netty udp-echo", "netty http3", "netty quic-stream",
+		"gnet tcp-echo", "gnet udp-echo", "fasthttp http1", "fasthttp https1", "netpoll http1",
+	} {
+		if !seen[key] {
+			t.Fatalf("scenario family %q missing", key)
+		}
+	}
+}
+
+func TestWindowsFullMatrixSpecLoads(t *testing.T) {
+	file, err := os.Open("windows-full-matrix.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	spec, err := LoadSpec(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spec.Scenarios) != 82 {
+		t.Fatalf("scenarios=%d, want windows full matrix scenarios", len(spec.Scenarios))
+	}
+	for _, scenario := range spec.Scenarios {
+		if scenario.Skip {
+			continue
+		}
+		if scenario.Framework == "netpoll" {
+			t.Fatalf("windows full matrix must not execute netpoll: %+v", scenario)
+		}
+		if scenario.Framework == "gnalloy" && scenario.Protocol != "http3" && scenario.Protocol != "quic-stream" && scenario.Backend != "iocp" {
+			t.Fatalf("gnalloy windows backend=%q scenario=%+v", scenario.Backend, scenario)
+		}
+		if scenario.Framework == "netty" && scenario.Backend != "nio" {
+			t.Fatalf("netty windows backend=%q scenario=%+v", scenario.Backend, scenario)
+		}
+	}
+}
+
 func TestBaselineNettyTCPEchoUsesNativeEpoll(t *testing.T) {
 	file, err := os.Open("baseline.json")
 	if err != nil {
@@ -570,7 +641,7 @@ func TestBaselineGnalloyTCPEchoUsesSameLoadModel(t *testing.T) {
 	}
 }
 
-func TestValidateExternalHarnessesRejectsSkippedScenario(t *testing.T) {
+func TestValidateExternalHarnessesAcceptsSkippedUnsupportedScenario(t *testing.T) {
 	spec := Spec{
 		Name: "strict",
 		Scenarios: []Scenario{{
@@ -582,8 +653,15 @@ func TestValidateExternalHarnessesRejectsSkippedScenario(t *testing.T) {
 		}},
 	}
 	err := ValidateExternalHarnesses(spec, ExternalHarnessOptions{})
-	if !errors.Is(err, ErrExternalHarness) {
-		t.Fatalf("err=%v, want ErrExternalHarness", err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := InspectExternalHarnesses(spec, ExternalHarnessOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.ExternalScenarios != 1 || report.Skipped != 1 || len(report.Issues) != 0 {
+		t.Fatalf("report=%+v", report)
 	}
 }
 

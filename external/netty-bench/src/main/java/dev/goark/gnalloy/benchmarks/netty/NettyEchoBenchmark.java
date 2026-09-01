@@ -26,6 +26,11 @@ public final class NettyEchoBenchmark {
                 return Http3LoadGenerator.run(server.address(), config);
             }
         }
+        if (config.quicStreamFamily()) {
+            try (QuicStreamServer server = QuicStreamServer.start(config)) {
+                return QuicStreamLoadGenerator.run(server.address(), config);
+            }
+        }
         try (EchoServer server = EchoServer.start(config)) {
             InetSocketAddress address = server.address();
             if (config.http1Family()) {

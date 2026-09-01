@@ -16,7 +16,7 @@ func writeBenchmarkResult(w io.Writer, cfg config, result benchResult) {
 }
 
 func benchmarkBackendLabel(cfg config) string {
-	if cfg.Protocol == "http3" {
+	if cfg.Protocol == "http3" || cfg.Protocol == "quic-stream" {
 		return "rfc9000"
 	}
 	return backendLabel(cfg.Backend)

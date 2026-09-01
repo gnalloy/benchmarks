@@ -163,6 +163,33 @@ func TestRunBenchmarkHTTPS2SustainedLoad(t *testing.T) {
 	}
 }
 
+func TestRunBenchmarkQUICStream(t *testing.T) {
+	cfg, err := parseConfig([]string{
+		"-protocol", "quic-stream",
+		"-addr", "127.0.0.1:0",
+		"-payload", "16",
+		"-connections", "1",
+		"-messages", "2",
+		"-timeout", "5s",
+		"-workers", "1",
+		"-latency-sample-rate", "1",
+		"-warmup-messages", "1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := runBenchmark(context.Background(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TotalRequests != 2 || result.Errors != 0 || result.NsPerOp <= 0 {
+		t.Fatalf("result=%+v", result)
+	}
+	if result.Protocol != "gnalloy-quic" || result.Latency.Samples != 2 || result.Latency.P50 <= 0 {
+		t.Fatalf("result=%+v", result)
+	}
+}
+
 func TestRunBenchmarkUDPEcho(t *testing.T) {
 	cfg, err := parseConfig([]string{
 		"-protocol", "udp-echo",

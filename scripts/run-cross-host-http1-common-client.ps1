@@ -39,15 +39,15 @@ param(
     [ValidateRange(1, 64)]
     [int]$ClientGoMaxProcs = 4,
     [string]$ClientCPUSet = "0,1,2,4",
-    [string]$ServerCPUSet = "0,1,4,5",
+    [string]$ServerCPUSet = "0,1,2,3",
     [ValidateRange(1, 64)]
     [int]$ServerGoMaxProcs = 4,
     [ValidateRange(1, 64)]
     [int]$EventLoops = 4,
     [ValidateRange(1, 64)]
     [int]$GnalloyWorkers = 4,
-    [string]$GnalloyBossCPUSet = "4",
-    [string]$GnalloyWorkerCPUSet = "0,1,4,5",
+    [string]$GnalloyBossCPUSet = "3",
+    [string]$GnalloyWorkerCPUSet = "0,1,2,3",
     [switch]$CaptureCPUProfile,
     [switch]$CaptureRuntimeTrace,
     [string]$ProfileOutputDirectory = "",
@@ -399,6 +399,7 @@ printf 'serverHostname=%s\n' "$(hostname)"
 uname -srmo
 awk -F ': ' '/^model name/{print "serverCPU=" $2; exit}' /proc/cpuinfo
 printf 'serverGovernor=%s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || printf unknown)"
+printf 'serverCPUTopology='; lscpu -p=CPU,CORE,SOCKET | grep -v '^#' | tr '\n' ';'; printf '\n'
 sha256sum '__SERVER_REPO__/external/bin/gnalloy-bench' '__SERVER_REPO__/external/bin/fasthttp-bench' '__SERVER_REPO__/external/bin/netty-bench.jar'
 '@.Replace("__SERVER_REPO__", $ServerRepo)
     $serverMetadata = Invoke-SSH -HostName $ServerHost -Command $serverMetadataCommand -IgnoreStandardError
@@ -408,6 +409,7 @@ printf 'clientHostname=%s\n' "$(hostname)"
 uname -srmo
 awk -F ': ' '/^model name/{print "clientCPU=" $2; exit}' /proc/cpuinfo
 printf 'clientGovernor=%s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || printf unknown)"
+printf 'clientCPUTopology='; lscpu -p=CPU,CORE,SOCKET | grep -v '^#' | tr '\n' ';'; printf '\n'
 sha256sum '__HTTP1_LOAD__'
 '@.Replace("__HTTP1_LOAD__", $ClientHTTP1Load)
     $clientMetadata = Invoke-SSH -HostName $ClientHost -Command $clientMetadataCommand -IgnoreStandardError

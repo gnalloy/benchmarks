@@ -13,6 +13,8 @@ import (
 	"gnalloy.org/transport-tcp"
 )
 
+const maxCoalescedHTTP1BodyBytes = 16 * 1024
+
 func startHTTP1Server(ctx context.Context, cfg config) (*echoServer, error) {
 	boss, workers, err := newGroups(cfg)
 	if err != nil {
@@ -60,10 +62,7 @@ func addHTTP1CodecPipeline(ch channel.Channel, cfg config) error {
 	if err != nil {
 		return err
 	}
-	encoder := http1.NewResponseEncoder()
-	if cfg.Protocol == "https1" && cfg.Payload > 0 && cfg.Payload <= 16*1024 {
-		encoder = http1.NewResponseEncoderWithOptions(http1.ResponseEncoderOptions{CoalesceBodyBytes: 16 * 1024})
-	}
+	encoder := newHTTP1ResponseEncoder(cfg.Payload)
 	if err := ch.Pipeline().AddLast("httpEncoder", encoder); err != nil {
 		return err
 	}
@@ -79,6 +78,15 @@ func addHTTP1CodecPipeline(ch channel.Channel, cfg config) error {
 			"Content-Type": "application/octet-stream",
 		},
 	})
+}
+
+func newHTTP1ResponseEncoder(payload int) *http1.ResponseEncoder {
+	if payload > 0 && payload <= maxCoalescedHTTP1BodyBytes {
+		return http1.NewResponseEncoderWithOptions(http1.ResponseEncoderOptions{
+			CoalesceBodyBytes: maxCoalescedHTTP1BodyBytes,
+		})
+	}
+	return http1.NewResponseEncoder()
 }
 
 type http1Handler struct {

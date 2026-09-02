@@ -32,6 +32,37 @@ func TestHTTP1HandlerDoesNotResubmitOwnerLoopWrite(t *testing.T) {
 	}
 }
 
+func TestHTTP1ResponseEncoderCoalescesSmallBody(t *testing.T) {
+	sink := &releasingSink{}
+	ch := channel.NewLocalChannel(1, buffer.NewHeapAllocator(), sink)
+	if err := ch.Pipeline().AddLast("encoder", newHTTP1ResponseEncoder(128)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ch.Write(http1.Response{StatusCode: 200, Body: buffer.NewSharedBuffer(make([]byte, 128))}); err != nil {
+		t.Fatal(err)
+	}
+	if sink.writes != 1 {
+		t.Fatalf("writes=%d, want one coalesced buffer", sink.writes)
+	}
+}
+
+func TestHTTP1ResponseEncoderSplitsLargeBody(t *testing.T) {
+	sink := &releasingSink{}
+	ch := channel.NewLocalChannel(1, buffer.NewHeapAllocator(), sink)
+	if err := ch.Pipeline().AddLast("encoder", newHTTP1ResponseEncoder(maxCoalescedHTTP1BodyBytes+1)); err != nil {
+		t.Fatal(err)
+	}
+
+	body := make([]byte, maxCoalescedHTTP1BodyBytes+1)
+	if err := ch.Write(http1.Response{StatusCode: 200, Body: buffer.NewSharedBuffer(body)}); err != nil {
+		t.Fatal(err)
+	}
+	if sink.writes != 2 {
+		t.Fatalf("writes=%d, want split header and body", sink.writes)
+	}
+}
+
 type countingExecutor struct {
 	submissions int
 }

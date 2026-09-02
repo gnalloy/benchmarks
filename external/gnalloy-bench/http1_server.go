@@ -98,7 +98,7 @@ func (h http1Handler) ChannelRead(ctx *channel.HandlerContext, msg any) {
 		Headers:    h.headers,
 		Body:       buffer.NewSharedBuffer(h.body),
 	}
-	if err := ctx.Channel().WriteAndFlush(resp); err != nil {
+	if err := ctx.WriteAndFlush(resp); err != nil {
 		ctx.FireExceptionCaught(err)
 	}
 }

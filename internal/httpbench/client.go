@@ -34,8 +34,9 @@ func prepareClients(ctx context.Context, cfg Config, group *transport.EventLoopG
 	clients := make([]client, 0, cfg.Connections)
 	host := requestHost(cfg)
 	expectedBody := ResponseBody(cfg.Payload)
+	clientTransport := newClientTransport(cfg)
 	for range cfg.Connections {
-		prepared, err := dialClient(ctx, cfg, group, host, expectedBody)
+		prepared, err := dialClient(ctx, cfg, group, clientTransport, host, expectedBody)
 		if err != nil {
 			closeClients(clients)
 			return nil, err
@@ -45,14 +46,18 @@ func prepareClients(ctx context.Context, cfg Config, group *transport.EventLoopG
 	return clients, nil
 }
 
-func dialClient(ctx context.Context, cfg Config, group *transport.EventLoopGroup, host string, expectedBody []byte) (client, error) {
-	protocol := newProtocolClient(host, expectedBody)
+func newClientTransport(cfg Config) *tcp.Transport {
 	tcpConfig := tcp.DefaultConfig()
 	tcpConfig.ConnectTimeoutMillis = connectTimeoutMillis(cfg.Timeout)
 	tcpConfig.ReadBufferSize = max(clientReadBufferSize, cfg.Payload)
+	return tcp.NewTransport(tcpConfig)
+}
+
+func dialClient(ctx context.Context, cfg Config, group *transport.EventLoopGroup, clientTransport *tcp.Transport, host string, expectedBody []byte) (client, error) {
+	protocol := newProtocolClient(host, expectedBody)
 	ch, err := bootstrap.NewDialer().
 		Group(group).
-		Transport(tcp.NewTransport(tcpConfig)).
+		Transport(clientTransport).
 		Initializer(func(ch channel.Channel) error {
 			return protocol.addPipeline(ch, cfg)
 		}).

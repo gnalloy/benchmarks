@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -62,6 +63,8 @@ func TestRunSaturatedAndPaced(t *testing.T) {
 }
 
 func TestRunConcurrentConnections(t *testing.T) {
+	previous := runtime.GOMAXPROCS(4)
+	defer runtime.GOMAXPROCS(previous)
 	listener := startTestServer(t, 16)
 	result, err := Run(context.Background(), Config{
 		Addr:              listener.Addr().String(),

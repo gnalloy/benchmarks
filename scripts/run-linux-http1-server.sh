@@ -15,6 +15,7 @@ SERVER_CPU_SET="${SERVER_CPU_SET:-0,1,2,3}"
 SERVER_GOMAXPROCS="${SERVER_GOMAXPROCS:-4}"
 EVENT_LOOPS="${EVENT_LOOPS:-4}"
 GNALLOY_WORKERS="${GNALLOY_WORKERS:-4}"
+GNALLOY_FLUSH_STRATEGY="${GNALLOY_FLUSH_STRATEGY:-read-complete}"
 GNALLOY_BOSS_CPU_SET="${GNALLOY_BOSS_CPU_SET:-3}"
 GNALLOY_WORKER_CPU_SET="${GNALLOY_WORKER_CPU_SET:-0,1,2,3}"
 GNALLOY_CPU_PROFILE="${GNALLOY_CPU_PROFILE:-}"
@@ -77,6 +78,13 @@ if [[ "${PROTOCOL}" != "http1" && "${PROTOCOL}" != "https1" ]]; then
   printf 'unsupported HTTP/1 family protocol: %s\n' "${PROTOCOL}" >&2
   exit 1
 fi
+case "${GNALLOY_FLUSH_STRATEGY}" in
+  immediate|read-complete|event-loop-batch) ;;
+  *)
+    printf 'unsupported Gnalloy flush strategy: %s\n' "${GNALLOY_FLUSH_STRATEGY}" >&2
+    exit 1
+    ;;
+esac
 tls_args=()
 netty_tls_args=()
 if [[ "${PROTOCOL}" == "https1" ]]; then
@@ -116,7 +124,8 @@ case "${FRAMEWORK}" in
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${GNALLOY_BENCH}" \
       -protocol "${PROTOCOL}" -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -backend epoll -boss 1 \
       -workers "${GNALLOY_WORKERS}" -boss-cpus "${GNALLOY_BOSS_CPU_SET}" \
-      -worker-cpus "${GNALLOY_WORKER_CPU_SET}" -reuseport=true -timeout 5m "${tls_args[@]}" "${profile_args[@]}"
+      -worker-cpus "${GNALLOY_WORKER_CPU_SET}" -reuseport=true -flush-strategy "${GNALLOY_FLUSH_STRATEGY}" \
+      -timeout 5m "${tls_args[@]}" "${profile_args[@]}"
     ;;
   fasthttp)
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${FASTHTTP_BENCH}" \

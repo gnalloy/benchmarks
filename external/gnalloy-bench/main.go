@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"gnalloy.org/benchmarks/internal/servermode"
 )
 
 func main() {
@@ -18,6 +20,9 @@ func runCLI(args []string, stdout io.Writer) error {
 	cfg, err := parseConfig(args)
 	if err != nil {
 		return err
+	}
+	if cfg.ServerOnly {
+		return runUDPServerOnly(context.Background(), cfg, stdout)
 	}
 	stopProfile, err := startCPUProfile(cfg.CPUProfile)
 	if err != nil {
@@ -34,6 +39,19 @@ func runCLI(args []string, stdout io.Writer) error {
 		writeBenchmarkResult(stdout, cfg, result)
 	}
 	return err
+}
+
+func runUDPServerOnly(ctx context.Context, cfg config, stdout io.Writer) error {
+	server, err := startUDPEchoServer(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	defer server.stop()
+	if err := servermode.WriteReady(stdout, servermode.Info{Framework: "gnalloy", Protocol: cfg.Protocol, Addr: server.addr}); err != nil {
+		return err
+	}
+	servermode.Wait(ctx)
+	return nil
 }
 
 func benchmarkName(protocol string) string {

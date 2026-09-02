@@ -20,7 +20,8 @@ record Config(
         int warmupMessages,
         TlsVersion tlsVersion,
         String alpn,
-        String cipherSuites) {
+        String cipherSuites,
+        boolean serverOnly) {
 
     static Config parse(String[] args) {
         Map<String, String> values = Args.parse(args);
@@ -39,7 +40,8 @@ record Config(
                 Args.intValue(values, "warmup-messages", 0),
                 TlsVersion.parse(values.getOrDefault("tls-version", "1.3")),
                 defaultAlpn(values),
-                values.getOrDefault("cipher-suites", ""));
+                values.getOrDefault("cipher-suites", ""),
+                Args.booleanValue(values, "server-only", false));
     }
 
     void validate() {
@@ -97,6 +99,9 @@ record Config(
         }
         if (!tlsEnabled() && !cipherSuiteList().isEmpty()) {
             throw new IllegalArgumentException("netty-bench: cipher-suites require TLS");
+        }
+        if (serverOnly && !udpEcho()) {
+            throw new IllegalArgumentException("netty-bench: server-only currently requires udp-echo protocol");
         }
         if (http3Family() && !cipherSuiteList().isEmpty()) {
             throw new IllegalArgumentException("netty-bench: HTTP/3 cipher suites are provider-managed");

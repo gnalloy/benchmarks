@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"gnalloy.org/benchmarks/internal/servermode"
 )
 
 var (
@@ -28,6 +30,7 @@ type config struct {
 	Multicore         bool
 	LatencySampleRate int
 	WarmupMessages    int
+	ServerOnly        bool
 }
 
 type benchResult struct {
@@ -51,6 +54,9 @@ func runCLI(args []string, stdout io.Writer) error {
 	cfg, err := parseConfig(args)
 	if err != nil {
 		return err
+	}
+	if cfg.ServerOnly {
+		return runUDPServerOnly(context.Background(), cfg, stdout)
 	}
 	result, err := runBenchmark(context.Background(), cfg)
 	if result.TotalRequests > 0 {
@@ -81,6 +87,7 @@ func parseConfig(args []string) (config, error) {
 	fs.BoolVar(&cfg.Multicore, "multicore", cfg.Multicore, "enable gnet multicore mode")
 	fs.IntVar(&cfg.LatencySampleRate, "latency-sample-rate", cfg.LatencySampleRate, "record one round-trip latency sample every N messages per connection; 0 disables latency sampling")
 	fs.IntVar(&cfg.WarmupMessages, "warmup-messages", cfg.WarmupMessages, "messages per connection sent before timed measurement; 0 disables in-process warmup")
+	fs.BoolVar(&cfg.ServerOnly, "server-only", cfg.ServerOnly, "run only the benchmark server")
 	if err := fs.Parse(args); err != nil {
 		return config{}, err
 	}
@@ -111,6 +118,22 @@ func (c config) validate() error {
 	if c.WarmupMessages < 0 {
 		return fmt.Errorf("%w: warmup-messages must not be negative", errInvalidConfig)
 	}
+	if c.ServerOnly && c.Protocol != "udp-echo" {
+		return fmt.Errorf("%w: server-only currently requires udp-echo protocol", errInvalidConfig)
+	}
+	return nil
+}
+
+func runUDPServerOnly(ctx context.Context, cfg config, stdout io.Writer) error {
+	server, err := startEchoServer(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	defer server.stop()
+	if err := servermode.WriteReady(stdout, servermode.Info{Framework: "gnet", Protocol: cfg.Protocol, Addr: server.addr}); err != nil {
+		return err
+	}
+	servermode.Wait(ctx)
 	return nil
 }
 

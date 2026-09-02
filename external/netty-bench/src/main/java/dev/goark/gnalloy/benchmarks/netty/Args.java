@@ -29,4 +29,18 @@ final class Args {
         }
         return Integer.parseInt(value);
     }
+
+    static boolean booleanValue(Map<String, String> values, String key, boolean fallback) {
+        String value = values.get(key);
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        if ("true".equalsIgnoreCase(value)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(value)) {
+            return false;
+        }
+        throw new IllegalArgumentException("netty-bench: invalid boolean for --" + key + ": " + value);
+    }
 }

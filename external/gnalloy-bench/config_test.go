@@ -341,6 +341,23 @@ func TestParseConfigSupportsUDPEcho(t *testing.T) {
 	}
 }
 
+func TestParseConfigSupportsUDPServerOnly(t *testing.T) {
+	cfg, err := parseConfig([]string{"-protocol", "udp-echo", "-server-only=true"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.ServerOnly {
+		t.Fatal("server-only=false, want true")
+	}
+}
+
+func TestParseConfigRejectsServerOnlyForOtherProtocols(t *testing.T) {
+	_, err := parseConfig([]string{"-protocol", "tcp-echo", "-server-only=true"})
+	if !errors.Is(err, errInvalidConfig) {
+		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
+	}
+}
+
 func TestParseConfigResolvesNativePerformanceFlags(t *testing.T) {
 	cfg, err := parseConfig([]string{
 		"-backend", "iouring",

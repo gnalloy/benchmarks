@@ -16,10 +16,12 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 final class DatagramEchoServer implements AutoCloseable {
     private final EventLoopGroup group;
     private final Channel channel;
+    private final AtomicBoolean closed = new AtomicBoolean();
 
     private DatagramEchoServer(EventLoopGroup group, Channel channel) {
         this.group = group;
@@ -58,6 +60,9 @@ final class DatagramEchoServer implements AutoCloseable {
 
     @Override
     public void close() throws InterruptedException {
+        if (!closed.compareAndSet(false, true)) {
+            return;
+        }
         ChannelFuture closeFuture = channel.close().sync();
         closeFuture.await();
         group.shutdownGracefully().sync();

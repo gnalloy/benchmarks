@@ -1,6 +1,7 @@
 package dev.goark.gnalloy.benchmarks.netty;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
 
 public final class NettyEchoBenchmark {
     private NettyEchoBenchmark() {
@@ -8,6 +9,11 @@ public final class NettyEchoBenchmark {
 
     public static void main(String[] args) throws Exception {
         Config config = Config.parse(args);
+        config.validate();
+        if (config.serverOnly()) {
+            runServerOnly(config);
+            return;
+        }
         BenchmarkResult result = run(config);
         if (result.totalRequests() > 0) {
             BenchmarkOutput.write(config, result);
@@ -40,6 +46,34 @@ public final class NettyEchoBenchmark {
                 return Http2LoadGenerator.run(address, config);
             }
             return LoadGenerator.run(address, config);
+        }
+    }
+
+    private static void runServerOnly(Config config) throws Exception {
+        DatagramEchoServer server = DatagramEchoServer.start(config);
+        Thread shutdownHook = new Thread(() -> closeServer(server), "netty-bench-shutdown");
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
+        try {
+            InetSocketAddress address = server.address();
+            System.out.printf(
+                    "serverReady=true framework=netty protocol=%s addr=%s:%d%n",
+                    config.protocol(), address.getHostString(), address.getPort());
+            System.out.flush();
+            new CountDownLatch(1).await();
+        } finally {
+            try {
+                Runtime.getRuntime().removeShutdownHook(shutdownHook);
+            } catch (IllegalStateException ignored) {
+            }
+            server.close();
+        }
+    }
+
+    private static void closeServer(DatagramEchoServer server) {
+        try {
+            server.close();
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
         }
     }
 }

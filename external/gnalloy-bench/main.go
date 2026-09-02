@@ -21,9 +21,6 @@ func runCLI(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if cfg.ServerOnly {
-		return runUDPServerOnly(context.Background(), cfg, stdout)
-	}
 	stopProfile, err := startCPUProfile(cfg.CPUProfile)
 	if err != nil {
 		return err
@@ -34,6 +31,9 @@ func runCLI(args []string, stdout io.Writer) error {
 		return err
 	}
 	defer stopTrace()
+	if cfg.ServerOnly {
+		return runUDPServerOnly(context.Background(), cfg, stdout)
+	}
 	result, err := runBenchmark(context.Background(), cfg)
 	if result.TotalRequests > 0 {
 		writeBenchmarkResult(stdout, cfg, result)

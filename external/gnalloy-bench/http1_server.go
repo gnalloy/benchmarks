@@ -87,7 +87,7 @@ type http1Handler struct {
 }
 
 func (h http1Handler) ChannelRead(ctx *channel.HandlerContext, msg any) {
-	req, ok := msg.(http1.Request)
+	req, ok := msg.(*http1.Request)
 	if !ok {
 		ctx.FireChannelRead(msg)
 		return

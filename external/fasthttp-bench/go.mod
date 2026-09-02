@@ -12,7 +12,7 @@ require (
 	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98 // indirect
-	gnalloy.org/codec-http1 v0.0.0-20260902185033-81eed4453bbc // indirect
+	gnalloy.org/codec-http1 v0.0.0-20260902195044-be536ac5a9e5 // indirect
 	gnalloy.org/gnalloy v0.0.0-20260902193450-65ce15f6ff60 // indirect
 	gnalloy.org/handler-tls v0.0.0-20260902193648-ea5c653ee1e6 // indirect
 	gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3 // indirect

@@ -22,7 +22,7 @@ func TestHTTP1HandlerDoesNotResubmitOwnerLoopWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ch.Pipeline().FireChannelRead(http1.Request{})
+	ch.Pipeline().FireChannelRead(&http1.Request{})
 
 	if executor.submissions != 0 {
 		t.Fatalf("owner-loop submissions=%d, want 0", executor.submissions)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"strings"
@@ -50,11 +51,46 @@ func TestParseConfigSupportsHTTP1ServerOnly(t *testing.T) {
 	}
 }
 
-func TestParseConfigRejectsHTTPS1ServerOnly(t *testing.T) {
-	_, err := parseConfig([]string{"-protocol", "https1", "-server-only=true"})
-	if !errors.Is(err, errInvalidConfig) {
-		t.Fatalf("err=%v, want errInvalidConfig", err)
+func TestParseConfigSupportsHTTPS1ServerOnly(t *testing.T) {
+	cfg, err := parseConfig([]string{"-protocol", "https1", "-server-only=true", "-tls-version", "1.2"})
+	if err != nil {
+		t.Fatal(err)
 	}
+	if !cfg.ServerOnly || cfg.TLSVersion != tlsVersion12 {
+		t.Fatalf("cfg=%+v", cfg)
+	}
+}
+
+func TestRunServerOnlyHTTPS1(t *testing.T) {
+	cfg, err := parseConfig([]string{
+		"-protocol", "https1",
+		"-server-only=true",
+		"-addr", "127.0.0.1:0",
+		"-payload", "16",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	output := readyCancelWriter{cancel: cancel}
+	if err := runServerOnly(ctx, cfg, &output); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), "serverReady=true framework=fasthttp protocol=https1") {
+		t.Fatalf("output=%q", output.String())
+	}
+}
+
+type readyCancelWriter struct {
+	strings.Builder
+	cancel context.CancelFunc
+}
+
+func (w *readyCancelWriter) Write(payload []byte) (int, error) {
+	written, err := w.Builder.Write(payload)
+	w.cancel()
+	return written, err
 }
 
 func TestRunCLISmokeHTTP1(t *testing.T) {

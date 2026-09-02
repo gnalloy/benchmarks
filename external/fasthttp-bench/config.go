@@ -103,8 +103,8 @@ func (c config) validate() error {
 	if c.Protocol == protocolHTTP1 && len(c.CipherSuiteIDs) > 0 {
 		return fmt.Errorf("%w: cipher suites require HTTPS", errInvalidConfig)
 	}
-	if c.ServerOnly && c.Protocol != protocolHTTP1 {
-		return fmt.Errorf("%w: server-only requires http1 protocol", errInvalidConfig)
+	if c.ServerOnly && c.Protocol != protocolHTTP1 && c.Protocol != protocolHTTPS1 {
+		return fmt.Errorf("%w: server-only requires http1 or https1 protocol", errInvalidConfig)
 	}
 	return nil
 }

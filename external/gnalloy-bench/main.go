@@ -55,7 +55,7 @@ func runServerOnly(ctx context.Context, cfg config, stdout io.Writer) error {
 		}
 		defer server.stop()
 		return waitForServerStop(ctx, stdout, cfg, server.addr)
-	case "http1":
+	case "http1", "https1":
 		server, err := startHTTP1Server(ctx, cfg)
 		if err != nil {
 			return err

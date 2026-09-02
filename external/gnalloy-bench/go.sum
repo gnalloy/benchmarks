@@ -20,10 +20,10 @@ gnalloy.org/codec-http2 v0.0.0-20260902161459-e42d986e5564 h1:jmeVWG1044PDXNbIP1
 gnalloy.org/codec-http2 v0.0.0-20260902161459-e42d986e5564/go.mod h1:HPHNoHJu/DMjfPsC/25acsVs2TF4D+lO4mRXjUDkhUY=
 gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81 h1:F898MYKxFmbSkz+TQMV2dCASLfP41nVOo2G77IA8v1Y=
 gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81/go.mod h1:92crEBwS/e4gpNyEIokXDmYi7tg1CJnhM3WI2gwsLsw=
-gnalloy.org/gnalloy v0.0.0-20260902012239-5357513937d5 h1:hwvJEvzoJSFAMUhvKv9B5FpdMB+QQ7/ilhMOxdp6RbI=
-gnalloy.org/gnalloy v0.0.0-20260902012239-5357513937d5/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
-gnalloy.org/handler-tls v0.0.0-20260902192002-544ee4f6ca63 h1:NOwvrEHzvhIdg2klzknMUzvQ7NfzQkUiyahaToOlMuQ=
-gnalloy.org/handler-tls v0.0.0-20260902192002-544ee4f6ca63/go.mod h1:KYkjLY+u83XcfJMvPE/bvTQIGAYodzsmcD1/iYDgYj0=
+gnalloy.org/gnalloy v0.0.0-20260902193450-65ce15f6ff60 h1:+yiqK8JW13cJLEE2g/qLkHGCW2mnGUy9yIwfdy5FghA=
+gnalloy.org/gnalloy v0.0.0-20260902193450-65ce15f6ff60/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
+gnalloy.org/handler-tls v0.0.0-20260902193648-ea5c653ee1e6 h1:Y/0z6/XaKf4nkKyqndaf/e9H/JutbBvOE0IyrOn0S3Y=
+gnalloy.org/handler-tls v0.0.0-20260902193648-ea5c653ee1e6/go.mod h1:nGHDfdCxD5qP11YGTor+90VdLIZsOeZ3NqRkdItRdQg=
 gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f h1:5l35q8Bxsn+Xv022nJqF8GIoj3jU6xDKZplTu44VK2c=
 gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f/go.mod h1:Hp87MhDuVqXEA3UAAsPhaGCX16fTuOFfT40SBjqS8zc=
 gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b h1:Jak/BDZxVrpkUIbDR3HLw2MTgHubaEuR8zZht7wkDOM=

@@ -41,13 +41,19 @@ func (h *responseHandler) UserEventTriggered(ctx *channel.HandlerContext, event 
 }
 
 func (h *responseHandler) ChannelRead(ctx *channel.HandlerContext, msg any) {
-	response, ok := msg.(http1.Response)
-	if !ok {
+	var response *http1.Response
+	switch value := msg.(type) {
+	case http1.Response:
+		response = &value
+	case *http1.Response:
+		response = value
+	}
+	if response == nil {
 		message.Release(msg)
 		h.fail(ctx, fmt.Errorf("httpbench: codec emitted unsupported inbound type %T", msg))
 		return
 	}
-	err := h.validate(response)
+	err := h.validate(*response)
 	response.Release()
 	select {
 	case h.responses <- err:

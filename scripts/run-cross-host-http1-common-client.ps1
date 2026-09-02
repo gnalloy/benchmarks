@@ -46,6 +46,12 @@ param(
     [int]$EventLoops = 4,
     [ValidateRange(1, 64)]
     [int]$GnalloyWorkers = 4,
+    [ValidateRange(1, [int]::MaxValue)]
+    [int]$GnalloyReadBufferSize = 4096,
+    [ValidateRange(1, [int]::MaxValue)]
+    [int]$GnalloyMaxMessagesPerRead = 32,
+    [ValidateRange(0, [int]::MaxValue)]
+    [int]$GnalloyEventBatchSize = 0,
     [ValidateSet("immediate", "read-complete", "event-loop-batch")]
     [string]$GnalloyFlushStrategy = "read-complete",
     [string]$GnalloyBossCPUSet = "3",
@@ -206,7 +212,7 @@ function Start-RemoteServer {
     $command = @'
 cd '__REMOTE_REPO__'
 : >'__REMOTE_LOG__'
-nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' ALPN='__ALPN__' CIPHER_SUITES='__CIPHER_SUITES__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_FLUSH_STRATEGY='__FLUSH_STRATEGY__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_ALLOC_PROFILE='__ALLOC_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' FASTHTTP_CPU_PROFILE='__CPU_PROFILE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
+nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' ALPN='__ALPN__' CIPHER_SUITES='__CIPHER_SUITES__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_READ_BUFFER_SIZE='__READ_BUFFER_SIZE__' GNALLOY_MAX_MESSAGES_PER_READ='__MAX_MESSAGES_PER_READ__' GNALLOY_EVENT_BATCH_SIZE='__EVENT_BATCH_SIZE__' GNALLOY_FLUSH_STRATEGY='__FLUSH_STRATEGY__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_ALLOC_PROFILE='__ALLOC_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' FASTHTTP_CPU_PROFILE='__CPU_PROFILE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
 '@
     $command = $command.Replace("__REMOTE_REPO__", $ServerRepo).
         Replace("__REMOTE_LOG__", $remoteLog).
@@ -220,6 +226,9 @@ nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS
         Replace("__SERVER_GOMAXPROCS__", $ServerGoMaxProcs.ToString()).
         Replace("__EVENT_LOOPS__", $EventLoops.ToString()).
         Replace("__GNALLOY_WORKERS__", $GnalloyWorkers.ToString()).
+        Replace("__READ_BUFFER_SIZE__", $GnalloyReadBufferSize.ToString()).
+        Replace("__MAX_MESSAGES_PER_READ__", $GnalloyMaxMessagesPerRead.ToString()).
+        Replace("__EVENT_BATCH_SIZE__", $GnalloyEventBatchSize.ToString()).
         Replace("__FLUSH_STRATEGY__", $GnalloyFlushStrategy).
         Replace("__BOSS_CPUS__", $GnalloyBossCPUSet).
         Replace("__WORKER_CPUS__", $GnalloyWorkerCPUSet).
@@ -403,7 +412,7 @@ try {
         "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
         "crossHost=true clientHost=$ClientHost clientAddress=$ClientAddress serverHost=$ServerHost serverAddress=$TargetAddress",
         "protocols=$($Protocols -join ',') tlsVersions=$($TLSVersions -join ',') alpn=$HTTP1ALPN tls11Cipher=$TLS11Cipher tls12Cipher=$TLS12Cipher connections=$Connections messages=$Messages warmupMessages=$WarmupMessages targetRate=$TargetRate latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds frameworks=$($Frameworks -join ',')",
-        "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyFlushStrategy=$GnalloyFlushStrategy gnalloyHTTP1Pipeline=tcp+channel+codec-http1+handler performanceGovernor=$SetPerformanceGovernor",
+        "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyReadBufferSize=$GnalloyReadBufferSize gnalloyMaxMessagesPerRead=$GnalloyMaxMessagesPerRead gnalloyEventBatchSize=$GnalloyEventBatchSize gnalloyFlushStrategy=$GnalloyFlushStrategy gnalloyHTTP1Pipeline=tcp+channel+codec-http1+handler performanceGovernor=$SetPerformanceGovernor",
         "unsupportedFrameworks=gnet,netpoll status=N/A reason=no-framework-http-codec"
     ) -Encoding utf8
     $serverMetadataCommand = @'

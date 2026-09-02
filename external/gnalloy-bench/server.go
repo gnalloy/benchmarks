@@ -72,6 +72,13 @@ func newGroups(cfg config) (*transport.EventLoopGroup, *transport.EventLoopGroup
 	return boss, workers, nil
 }
 
+func benchmarkChildOptions(cfg config) []channel.ChannelOptionAssignment {
+	return []channel.ChannelOptionAssignment{
+		channel.OptionMaxMessagesPerRead.Assignment(cfg.MaxMessagesPerRead),
+		channel.OptionFlushStrategy.Assignment(cfg.FlushStrategy),
+	}
+}
+
 func bindEchoServer(ctx context.Context, cfg config, boss *transport.EventLoopGroup, workers *transport.EventLoopGroup, echoExecutor *tcpEchoExecutorGroup) (bootstrap.Server, error) {
 	tcpConfig := tcp.DefaultConfig()
 	tcpConfig.ReadBufferSize = cfg.ReadBufferSize
@@ -86,8 +93,7 @@ func bindEchoServer(ctx context.Context, cfg config, boss *transport.EventLoopGr
 	return bootstrap.NewServerBootstrap().
 		Group(boss, workers).
 		Transport(tcp.NewTransport(tcpConfig)).
-		ChildOption(channel.OptionMaxMessagesPerRead.Assignment(cfg.MaxMessagesPerRead)).
-		ChildOption(channel.OptionFlushStrategy.Assignment(cfg.FlushStrategy)).
+		ChildOption(benchmarkChildOptions(cfg)...).
 		ChildInitializer(func(ch channel.Channel) error {
 			handler, err := newTCPEchoHandler(cfg, echoExecutor)
 			if err != nil {

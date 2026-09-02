@@ -10,6 +10,22 @@ import (
 	"gnalloy.org/gnalloy/transport"
 )
 
+func TestHTTP1ServerAppliesBenchmarkChildOptions(t *testing.T) {
+	cfg := config{
+		MaxMessagesPerRead: 7,
+		FlushStrategy:      channel.FlushOnEventLoopBatch,
+	}
+	options := channel.NewChannelOptions()
+	options.Apply(benchmarkChildOptions(cfg)...)
+
+	if got := channel.OptionMaxMessagesPerRead.Get(options); got != cfg.MaxMessagesPerRead {
+		t.Fatalf("max messages per read=%d, want %d", got, cfg.MaxMessagesPerRead)
+	}
+	if got := channel.OptionFlushStrategy.Get(options); got != cfg.FlushStrategy {
+		t.Fatalf("flush strategy=%d, want %d", got, cfg.FlushStrategy)
+	}
+}
+
 func TestHTTP1HandlerDoesNotResubmitOwnerLoopWrite(t *testing.T) {
 	executor := &countingExecutor{}
 	sink := &releasingSink{}

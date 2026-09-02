@@ -27,6 +27,7 @@ func bindUDPEchoServer(ctx context.Context, cfg config, boss *transport.EventLoo
 	udpConfig := udp.DefaultConfig()
 	udpConfig.ReadBufferSize = cfg.ReadBufferSize
 	udpConfig.ReusePort = cfg.ReusePort
+	udpConfig.PooledInboundDatagrams = true
 	if cfg.Mmap {
 		udpConfig.AllocatorFactory = udp.NewMmapAllocatorFactory(buffer.MmapAllocatorConfig{
 			BlockSize: cfg.MmapBlockSize,

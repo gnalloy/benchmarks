@@ -30,8 +30,8 @@ gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b h1:Jak/BDZxVrpkUIb
 gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b/go.mod h1:TchYby9N52E0m9kKaqDzrHWDh91n8NjyyqIVbzCtkHo=
 gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3 h1:OgvNwgeDUBH/8/ieUZMaBPzsxa2k0AChZO8T+8JXa0k=
 gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3/go.mod h1:nR7rAmU0ZsUb5g04Khl97HYtNdlRmYOGZ2d3pX/aTN0=
-gnalloy.org/transport-udp v0.0.0-20260902012645-77ef2b8b402e h1:os92gCIjO8+hE4Qx5fYQJXkJ6UKB66rVjdO+OHzQcU8=
-gnalloy.org/transport-udp v0.0.0-20260902012645-77ef2b8b402e/go.mod h1:Oz42iFPvKh4DdFDdJSwCfO0uPM5qWUPdJnEz42UKmMg=
+gnalloy.org/transport-udp v0.0.0-20260902050055-38a5045b5989 h1:BO67oiIRylGgEUP3easwSK6MsVsEG4bPYWagy7BT4vw=
+gnalloy.org/transport-udp v0.0.0-20260902050055-38a5045b5989/go.mod h1:Oz42iFPvKh4DdFDdJSwCfO0uPM5qWUPdJnEz42UKmMg=
 gnalloy.org/transport-zerocopy v0.0.0-20260831155854-78135ae02cc4 h1:WIEc0eq25LyEW2UTIO3m/48wpKE+jqA8iXVzNlsUY/8=
 gnalloy.org/transport-zerocopy v0.0.0-20260831155854-78135ae02cc4/go.mod h1:BFVVe08bATHMx9ZzcKjEYJQw5D2KDLAFrY082SJu3MM=
 go.uber.org/mock v0.5.2 h1:LbtPTcP8A5k9WPXj54PPPbjcI4Y6lhyOZXn+VS7wNko=

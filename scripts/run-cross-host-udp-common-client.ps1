@@ -26,6 +26,7 @@ param(
     [int]$Repetitions = 5,
     [ValidateRange(0, 300)]
     [int]$CooldownSeconds = 10,
+    [bool]$SetPerformanceGovernor = $true,
     [ValidateRange(1, 64)]
     [int]$ClientGoMaxProcs = 4,
     [string]$ClientCPUSet = "0,1,2,4",
@@ -118,6 +119,39 @@ fi
     Invoke-SSH -HostName $ServerHost -Command $command -IgnoreStandardError | Out-Null
 }
 
+function Set-RemotePerformanceGovernor {
+    param([string]$HostName)
+    if (-not $SetPerformanceGovernor) {
+        return ""
+    }
+    $command = @'
+for path in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+  if test ! -w "$path"; then
+    printf 'CPU governor is not writable: %s\n' "$path" >&2
+    exit 1
+  fi
+  printf '%s=%s\n' "$path" "$(cat "$path")"
+  printf performance >"$path"
+done
+'@
+    return Invoke-SSH -HostName $HostName -Command $command -IgnoreStandardError
+}
+
+function Restore-RemoteGovernors {
+    param([string]$HostName, [string]$Snapshot)
+    if ([string]::IsNullOrWhiteSpace($Snapshot)) {
+        return
+    }
+    $commands = foreach ($line in $Snapshot -split "`n") {
+        $parts = $line.Split("=", 2)
+        if ($parts.Count -ne 2 -or $parts[0] -notmatch '^/sys/devices/system/cpu/cpu[0-9]+/cpufreq/scaling_governor$' -or $parts[1] -notmatch '^[a-z0-9_-]+$') {
+            throw "Invalid governor snapshot from ${HostName}: $line"
+        }
+        "printf '$($parts[1])' >'$($parts[0])'"
+    }
+    Invoke-SSH -HostName $HostName -Command ($commands -join "`n") -IgnoreStandardError | Out-Null
+}
+
 function Start-RemoteServer {
     param([ValidateSet("gnalloy", "gnet", "netty")][string]$Framework)
     Stop-RemoteServer
@@ -198,11 +232,16 @@ if ($clientCheck -ne "ready") {
 
 $parent = Split-Path -Parent $Output
 New-Item -ItemType Directory -Path $parent -Force | Out-Null
-Set-Content -LiteralPath $Output -Value @(
+$serverGovernorSnapshot = ""
+$clientGovernorSnapshot = ""
+try {
+    $serverGovernorSnapshot = Set-RemotePerformanceGovernor -HostName $ServerHost
+    $clientGovernorSnapshot = Set-RemotePerformanceGovernor -HostName $ClientHost
+    Set-Content -LiteralPath $Output -Value @(
     "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
     "crossHost=true clientHost=$ClientHost clientAddress=$ClientAddress serverHost=$ServerHost serverAddress=$TargetAddress",
-    "connections=$Connections messages=$Messages warmupMessages=$WarmupMessages targetRate=$TargetRate latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds clientGOMAXPROCS=$ClientGoMaxProcs",
-    "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyBossCPUSet=$GnalloyBossCPUSet gnalloyWorkerCPUSet=$GnalloyWorkerCPUSet gnalloyMaxMessagesPerRead=$GnalloyMaxMessagesPerRead",
+    "connections=$Connections messages=$Messages warmupMessages=$WarmupMessages targetRate=$TargetRate latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds",
+    "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyBossCPUSet=$GnalloyBossCPUSet gnalloyWorkerCPUSet=$GnalloyWorkerCPUSet gnalloyMaxMessagesPerRead=$GnalloyMaxMessagesPerRead performanceGovernor=$SetPerformanceGovernor",
     "excludedFrameworks=netpoll,fasthttp reason=no-comparable-udp-server"
 ) -Encoding utf8
 $metadataTemplate = @'
@@ -228,7 +267,6 @@ $pingBaseline = Invoke-SSH -HostName $ClientHost -Command "ping -c 10 '$ServerHo
 Write-Output $pingBaseline
 Add-Content -LiteralPath $Output -Value $pingBaseline -Encoding utf8
 
-try {
     foreach ($payload in $Payloads) {
         for ($run = 1; $run -le $Repetitions; $run++) {
             switch (($run - 1) % 3) {
@@ -251,5 +289,13 @@ try {
         }
     }
 } finally {
-    Stop-RemoteServer
+    try {
+        Stop-RemoteServer
+    } finally {
+        try {
+            Restore-RemoteGovernors -HostName $ClientHost -Snapshot $clientGovernorSnapshot
+        } finally {
+            Restore-RemoteGovernors -HostName $ServerHost -Snapshot $serverGovernorSnapshot
+        }
+    }
 }

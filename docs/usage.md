@@ -61,7 +61,7 @@ To validate UDP over the LAN with fixed host roles, run the common client on Deb
 .\scripts\run-cross-host-udp-common-client.ps1 -TargetRate 60000
 ```
 
-The client defaults to CPUs `0,1,2,4`, avoiding its NIC IRQ on CPU 11 and using four distinct physical cores. Cross-host results include both NICs, the switch, and both operating-system network stacks. Keep them separate from same-host CPU-isolated results.
+The client defaults to CPUs `0,1,2,4`, avoiding its NIC IRQ on CPU 11 and using four distinct physical cores. The runner saves each host's CPU governors, selects `performance` for the run, and restores every original value during cleanup. Cross-host results include both NICs, the switch, and both operating-system network stacks. Keep them separate from same-host CPU-isolated results.
 
 ## API Selection
 

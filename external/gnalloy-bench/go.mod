@@ -3,8 +3,8 @@ module gnalloy.org/benchmarks/external/gnalloy-bench
 go 1.25.0
 
 require (
-	gnalloy.org/benchmarks v0.0.0-20260902200617-e691a11c0149
-	gnalloy.org/codec-http1 v0.0.0-20260902200338-e9f47761293e
+	gnalloy.org/benchmarks v0.0.0-20260902202644-2b339d306fbe
+	gnalloy.org/codec-http1 v0.0.0-20260902202452-920dcd486837
 	gnalloy.org/codec-http2 v0.0.0-20260902161459-e42d986e5564
 	gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81
 	gnalloy.org/gnalloy v0.0.0-20260902193450-65ce15f6ff60

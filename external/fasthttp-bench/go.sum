@@ -12,8 +12,8 @@ gnalloy.org/benchmarks v0.0.0-20260902164329-dca0030bcec3 h1:nJXvh6dwrilxIYRk59M
 gnalloy.org/benchmarks v0.0.0-20260902164329-dca0030bcec3/go.mod h1:Lr3z5qR6bYMoWGyAd/hYcVtqUZsK4WJwoFkiRe4oLEk=
 gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98 h1:Hilym9O+lbWeRljPkltt4qPTVuvpHJ8AnPEnJbxDItw=
 gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98/go.mod h1:Y5Bk5clhC0i3lilHSjH1bxmc0Ls7fRqSvYf5mV0PXUw=
-gnalloy.org/codec-http1 v0.0.0-20260902182314-af674d1b280a h1:5gqH+a7GLy7l6rMvRW65JayW+J2qlCmGn8Zj3u8pvkg=
-gnalloy.org/codec-http1 v0.0.0-20260902182314-af674d1b280a/go.mod h1:3P7UGfCb5nkrdaL7KTdRN5yf4LCZBxBXUjntNmD2Ww4=
+gnalloy.org/codec-http1 v0.0.0-20260902185033-81eed4453bbc h1:KFh5TbQLgYC8uh+Knd/1TOH7D+MZkzqMD++PusgMhCE=
+gnalloy.org/codec-http1 v0.0.0-20260902185033-81eed4453bbc/go.mod h1:3P7UGfCb5nkrdaL7KTdRN5yf4LCZBxBXUjntNmD2Ww4=
 gnalloy.org/gnalloy v0.0.0-20260831153720-533bb39b2ad6 h1:YtIsp2u+paX8W0rCuIP71AUtjIC82OAXa0FVF8loNbk=
 gnalloy.org/gnalloy v0.0.0-20260831153720-533bb39b2ad6/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
 gnalloy.org/handler-tls v0.0.0-20260902181015-e6592e8cfcbe h1:+AYSpkieCK9E0lCYDuPR/AdjxXYb7onCPkwepCJElP0=

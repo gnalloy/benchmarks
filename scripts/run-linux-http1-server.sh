@@ -18,6 +18,7 @@ GNALLOY_WORKERS="${GNALLOY_WORKERS:-4}"
 GNALLOY_BOSS_CPU_SET="${GNALLOY_BOSS_CPU_SET:-3}"
 GNALLOY_WORKER_CPU_SET="${GNALLOY_WORKER_CPU_SET:-0,1,2,3}"
 GNALLOY_CPU_PROFILE="${GNALLOY_CPU_PROFILE:-}"
+GNALLOY_ALLOC_PROFILE="${GNALLOY_ALLOC_PROFILE:-}"
 GNALLOY_RUNTIME_TRACE="${GNALLOY_RUNTIME_TRACE:-}"
 NICE_LEVEL="${NICE_LEVEL:-0}"
 SERVER_PID_FILE="${SERVER_PID_FILE:-/tmp/gnalloy-http1-cross-host.pid}"
@@ -103,6 +104,10 @@ case "${FRAMEWORK}" in
     if [[ -n "${GNALLOY_CPU_PROFILE}" ]]; then
       mkdir -p "$(dirname "${GNALLOY_CPU_PROFILE}")"
       profile_args+=( -cpuprofile "${GNALLOY_CPU_PROFILE}" )
+    fi
+    if [[ -n "${GNALLOY_ALLOC_PROFILE}" ]]; then
+      mkdir -p "$(dirname "${GNALLOY_ALLOC_PROFILE}")"
+      profile_args+=( -allocprofile "${GNALLOY_ALLOC_PROFILE}" )
     fi
     if [[ -n "${GNALLOY_RUNTIME_TRACE}" ]]; then
       mkdir -p "$(dirname "${GNALLOY_RUNTIME_TRACE}")"

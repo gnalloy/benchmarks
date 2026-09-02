@@ -49,6 +49,7 @@ param(
     [string]$GnalloyBossCPUSet = "3",
     [string]$GnalloyWorkerCPUSet = "0,1,2,3",
     [switch]$CaptureCPUProfile,
+    [switch]$CaptureAllocProfile,
     [switch]$CaptureRuntimeTrace,
     [string]$ProfileOutputDirectory = "",
     [string]$ClientHTTP1Load = "",
@@ -66,11 +67,11 @@ if ([string]::IsNullOrWhiteSpace($Output)) {
     $mode = if ($TargetRate -gt 0) { "offered-$TargetRate" } else { "saturation" }
     $Output = Join-Path $repoRoot "reports/raw/linux-cross-host-http1-family-$mode.out"
 }
-if (($CaptureCPUProfile -or $CaptureRuntimeTrace) -and [string]::IsNullOrWhiteSpace($ProfileOutputDirectory)) {
+if (($CaptureCPUProfile -or $CaptureAllocProfile -or $CaptureRuntimeTrace) -and [string]::IsNullOrWhiteSpace($ProfileOutputDirectory)) {
     $ProfileOutputDirectory = Join-Path $repoRoot "reports/raw/cross-host-http1-profiles"
 }
-if ($CaptureCPUProfile -and $CaptureRuntimeTrace) {
-    throw "CaptureCPUProfile and CaptureRuntimeTrace must run separately"
+if (@($CaptureCPUProfile, $CaptureAllocProfile, $CaptureRuntimeTrace).Where({ $_ }).Count -gt 1) {
+    throw "CPU, allocation, and runtime trace profiles must run separately"
 }
 
 $remotePidFile = "/tmp/gnalloy-http1-cross-host.pid"
@@ -196,13 +197,14 @@ function Start-RemoteServer {
         [string]$CipherSuites,
         [int]$Payload,
         [string]$CPUProfile = "",
+        [string]$AllocProfile = "",
         [string]$RuntimeTrace = ""
     )
     Stop-RemoteServer
     $command = @'
 cd '__REMOTE_REPO__'
 : >'__REMOTE_LOG__'
-nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' ALPN='__ALPN__' CIPHER_SUITES='__CIPHER_SUITES__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
+nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' ALPN='__ALPN__' CIPHER_SUITES='__CIPHER_SUITES__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_ALLOC_PROFILE='__ALLOC_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
 '@
     $command = $command.Replace("__REMOTE_REPO__", $ServerRepo).
         Replace("__REMOTE_LOG__", $remoteLog).
@@ -219,6 +221,7 @@ nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS
         Replace("__BOSS_CPUS__", $GnalloyBossCPUSet).
         Replace("__WORKER_CPUS__", $GnalloyWorkerCPUSet).
         Replace("__CPU_PROFILE__", $CPUProfile).
+        Replace("__ALLOC_PROFILE__", $AllocProfile).
         Replace("__RUNTIME_TRACE__", $RuntimeTrace).
         Replace("__PID_FILE__", $remotePidFile).
         Replace("__SERVER_SCRIPT__", $ServerScript).
@@ -253,6 +256,9 @@ function Get-ProfilePaths {
     $baseName = "$Protocol-gnalloy-$mode-$tlsLabel-p$Payload-r$Run-codec"
     if ($CaptureCPUProfile) {
         $paths.CPUProfile = "$remoteProfileDirectory/$baseName.cpu.pprof"
+    }
+    if ($CaptureAllocProfile) {
+        $paths.AllocProfile = "$remoteProfileDirectory/$baseName.alloc.pprof"
     }
     if ($CaptureRuntimeTrace) {
         $paths.RuntimeTrace = "$remoteProfileDirectory/$baseName.trace"
@@ -310,7 +316,7 @@ function Invoke-Case {
     foreach ($remotePath in $profiles.Values) {
         Invoke-SSH -HostName $ServerHost -Command "rm -f -- '$remotePath'" -IgnoreStandardError | Out-Null
     }
-    Start-RemoteServer -Framework $Framework -Protocol $Protocol -TLSVersion $TLSVersion -CipherSuites $CipherSuites -Payload $Payload -CPUProfile $profiles["CPUProfile"] -RuntimeTrace $profiles["RuntimeTrace"]
+    Start-RemoteServer -Framework $Framework -Protocol $Protocol -TLSVersion $TLSVersion -CipherSuites $CipherSuites -Payload $Payload -CPUProfile $profiles["CPUProfile"] -AllocProfile $profiles["AllocProfile"] -RuntimeTrace $profiles["RuntimeTrace"]
     try {
         Invoke-Client -Framework $Framework -Protocol $Protocol -TLSVersion $TLSVersion -CipherSuites $CipherSuites -Payload $Payload
     } finally {

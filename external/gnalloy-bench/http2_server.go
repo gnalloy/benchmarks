@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"gnalloy.org/benchmarks/external/internal/benchh2"
@@ -10,7 +9,6 @@ import (
 	"gnalloy.org/gnalloy/bootstrap"
 	"gnalloy.org/gnalloy/buffer"
 	"gnalloy.org/gnalloy/channel"
-	"gnalloy.org/gnalloy/codec"
 	"gnalloy.org/gnalloy/transport"
 	gnalloytls "gnalloy.org/handler-tls"
 	"gnalloy.org/transport-tcp"
@@ -78,7 +76,7 @@ func addHTTP2Pipeline(ch channel.Channel, cfg config) error {
 		return err
 	}
 	pipeline := ch.Pipeline()
-	if err := pipeline.AddLast(http2PrefaceHandlerName, newHTTP2PrefaceDecoder()); err != nil {
+	if err := pipeline.AddLast(http2PrefaceHandlerName, http2.NewPrefaceDecoder()); err != nil {
 		return err
 	}
 	if err := pipeline.AddLast("http2-frame-decoder", frameDecoder); err != nil {
@@ -107,71 +105,6 @@ func addHTTP2Pipeline(ch channel.Channel, cfg config) error {
 		return err
 	}
 	return pipeline.AddLast("http2-handler", newHTTP2BenchmarkHandler(cfg.Payload))
-}
-
-type http2PrefaceDecoder struct {
-	*codec.ByteToMessageDecoder
-	matched int
-	done    bool
-}
-
-func newHTTP2PrefaceDecoder() *http2PrefaceDecoder {
-	d := &http2PrefaceDecoder{}
-	d.ByteToMessageDecoder = codec.NewByteToMessageDecoder(d)
-	return d
-}
-
-func (d *http2PrefaceDecoder) Decode(_ *channel.HandlerContext, in *buffer.CompositeByteBuf) (any, error) {
-	if d.done {
-		return d.sliceReadable(in)
-	}
-	preface := []byte(http2.ClientPreface)
-	needed := len(preface) - d.matched
-	readable := in.ReadableBytes()
-	if readable < needed {
-		if err := d.matchPreface(in, readable); err != nil {
-			return nil, err
-		}
-		d.matched += readable
-		return nil, in.SkipBytes(readable)
-	}
-	if err := d.matchPreface(in, needed); err != nil {
-		return nil, err
-	}
-	d.matched = len(preface)
-	d.done = true
-	if err := in.SkipBytes(needed); err != nil {
-		return nil, err
-	}
-	return d.sliceReadable(in)
-}
-
-func (d *http2PrefaceDecoder) matchPreface(in *buffer.CompositeByteBuf, n int) error {
-	preface := []byte(http2.ClientPreface)
-	index := in.ReaderIndex()
-	for i := 0; i < n; i++ {
-		b, ok := in.GetByte(index + i)
-		if !ok || b != preface[d.matched+i] {
-			return fmt.Errorf("gnalloy-bench: invalid http2 client preface")
-		}
-	}
-	return nil
-}
-
-func (d *http2PrefaceDecoder) sliceReadable(in *buffer.CompositeByteBuf) (buffer.ByteBuf, error) {
-	readable := in.ReadableBytes()
-	if readable == 0 {
-		return nil, nil
-	}
-	out, err := in.Slice(in.ReaderIndex(), readable)
-	if err != nil {
-		return nil, err
-	}
-	if err := in.SkipBytes(readable); err != nil {
-		out.Release()
-		return nil, err
-	}
-	return out, nil
 }
 
 type http2BenchmarkHandler struct {

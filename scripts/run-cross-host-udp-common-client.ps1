@@ -24,6 +24,8 @@ param(
     [long]$TargetRate = 0,
     [ValidateRange(1, 100)]
     [int]$Repetitions = 5,
+    [ValidateSet("gnalloy", "gnet", "netty")]
+    [string[]]$Frameworks = @("gnalloy", "gnet", "netty"),
     [ValidateRange(0, 300)]
     [int]$CooldownSeconds = 10,
     [bool]$SetPerformanceGovernor = $true,
@@ -41,6 +43,9 @@ param(
     [int]$GnalloyMaxMessagesPerRead = 64,
     [string]$GnalloyBossCPUSet = "4",
     [string]$GnalloyWorkerCPUSet = "0,1,4,5",
+    [switch]$CaptureCPUProfile,
+    [switch]$CaptureRuntimeTrace,
+    [string]$ProfileOutputDirectory = "",
     [string]$ClientUdpLoad = "",
     [string]$Output = ""
 )
@@ -56,9 +61,16 @@ if ([string]::IsNullOrWhiteSpace($Output)) {
     $mode = if ($TargetRate -gt 0) { "offered-$TargetRate" } else { "saturation" }
     $Output = Join-Path $repoRoot "reports/raw/linux-cross-host-udp-$mode.out"
 }
+if (($CaptureCPUProfile -or $CaptureRuntimeTrace) -and [string]::IsNullOrWhiteSpace($ProfileOutputDirectory)) {
+    $ProfileOutputDirectory = Join-Path $repoRoot "reports/raw/cross-host-profiles"
+}
+if ($CaptureCPUProfile -and $CaptureRuntimeTrace) {
+    throw "CaptureCPUProfile and CaptureRuntimeTrace must run separately"
+}
 
 $remotePidFile = "/tmp/gnalloy-udp-cross-host.pid"
 $remoteLog = "/tmp/gnalloy-udp-cross-host.log"
+$remoteProfileDirectory = "$ServerRepo/reports/raw/cross-host-profiles"
 
 function Assert-SafeRemoteValue {
     param([string]$Name, [string]$Value)
@@ -95,6 +107,35 @@ function Invoke-SSH {
         [Console]::Error.WriteLine($stderr)
     }
     return $stdout
+}
+
+function Receive-RemoteFile {
+    param([string]$RemotePath, [string]$LocalPath)
+    $scp = (Get-Command scp -ErrorAction Stop).Source
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $scp
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    foreach ($argument in @("-P", $SSHPort.ToString(), "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "${SSHUser}@${ServerHost}:$RemotePath", $LocalPath)) {
+        $startInfo.ArgumentList.Add($argument)
+    }
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $startInfo
+    if (-not $process.Start()) {
+        throw "Failed to start SCP"
+    }
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    $process.WaitForExit()
+    $stdout = $stdoutTask.GetAwaiter().GetResult().TrimEnd()
+    $stderr = $stderrTask.GetAwaiter().GetResult().TrimEnd()
+    if ($process.ExitCode -ne 0) {
+        throw "SCP failed with exit code $($process.ExitCode): $stderr"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($stdout)) {
+        Write-Output $stdout
+    }
 }
 
 function Stop-RemoteServer {
@@ -153,12 +194,16 @@ function Restore-RemoteGovernors {
 }
 
 function Start-RemoteServer {
-    param([ValidateSet("gnalloy", "gnet", "netty")][string]$Framework)
+    param(
+        [ValidateSet("gnalloy", "gnet", "netty")][string]$Framework,
+        [string]$CPUProfile = "",
+        [string]$RuntimeTrace = ""
+    )
     Stop-RemoteServer
     $template = @'
 cd '__REMOTE_REPO__'
 : >'__REMOTE_LOG__'
-nohup env SERVER_ADDR='__BIND_ADDR__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_MAX_MESSAGES_PER_READ='__READ_BATCH__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' GNET_BENCH='__REMOTE_REPO__/external/bin/gnet-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
+nohup env SERVER_ADDR='__BIND_ADDR__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_MAX_MESSAGES_PER_READ='__READ_BATCH__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' GNET_BENCH='__REMOTE_REPO__/external/bin/gnet-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
 '@
     $command = $template.Replace("__REMOTE_REPO__", $ServerRepo).
         Replace("__REMOTE_LOG__", $remoteLog).
@@ -170,6 +215,8 @@ nohup env SERVER_ADDR='__BIND_ADDR__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GO
         Replace("__READ_BATCH__", $GnalloyMaxMessagesPerRead.ToString()).
         Replace("__BOSS_CPUS__", $GnalloyBossCPUSet).
         Replace("__WORKER_CPUS__", $GnalloyWorkerCPUSet).
+        Replace("__CPU_PROFILE__", $CPUProfile).
+        Replace("__RUNTIME_TRACE__", $RuntimeTrace).
         Replace("__PID_FILE__", $remotePidFile).
         Replace("__SERVER_SCRIPT__", $ServerScript).
         Replace("__FRAMEWORK__", $Framework)
@@ -193,6 +240,42 @@ nohup env SERVER_ADDR='__BIND_ADDR__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GO
     throw "Remote $Framework server readiness timed out:`n$lastLog"
 }
 
+function Get-ProfilePaths {
+    param([string]$Framework, [int]$Payload, [int]$Run)
+    $paths = @{}
+    if ($Framework -ne "gnalloy") {
+        return $paths
+    }
+    $mode = if ($TargetRate -gt 0) { "offered-$TargetRate" } else { "saturation" }
+    $baseName = "udp-gnalloy-$mode-p$Payload-r$Run-read$GnalloyMaxMessagesPerRead"
+    if ($CaptureCPUProfile) {
+        $paths.CPUProfile = "$remoteProfileDirectory/$baseName.cpu.pprof"
+    }
+    if ($CaptureRuntimeTrace) {
+        $paths.RuntimeTrace = "$remoteProfileDirectory/$baseName.trace"
+    }
+    return $paths
+}
+
+function Receive-Profiles {
+    param([hashtable]$Paths)
+    if ($Paths.Count -eq 0) {
+        return
+    }
+    New-Item -ItemType Directory -Path $ProfileOutputDirectory -Force | Out-Null
+    foreach ($remotePath in $Paths.Values) {
+        $remoteCheck = Invoke-SSH -HostName $ServerHost -Command "test -s '$remotePath' && printf ready" -IgnoreStandardError
+        if ($remoteCheck -ne "ready") {
+            throw "Remote profile is missing or empty: $remotePath"
+        }
+        $localPath = Join-Path $ProfileOutputDirectory ([System.IO.Path]::GetFileName($remotePath))
+        Receive-RemoteFile -RemotePath $remotePath -LocalPath $localPath
+        if (-not (Test-Path -LiteralPath $localPath -PathType Leaf) -or (Get-Item -LiteralPath $localPath).Length -eq 0) {
+            throw "Downloaded profile is missing or empty: $localPath"
+        }
+    }
+}
+
 function Invoke-Client {
     param([string]$Framework, [int]$Payload)
     $command = "taskset -c '$ClientCPUSet' env GOMAXPROCS='$ClientGoMaxProcs' '$ClientUdpLoad' -server-framework '$Framework' -addr '$TargetAddress' -payload '$Payload' -connections '$Connections' -messages '$Messages' -warmup-messages '$WarmupMessages' -latency-sample-rate '$LatencySampleRate' -target-rate '$TargetRate' -timeout 5m"
@@ -206,18 +289,26 @@ function Invoke-Case {
     $case = "case=$Framework payload=$Payload run=$Run"
     Write-Output $case
     Add-Content -LiteralPath $Output -Value $case -Encoding utf8
-    Start-RemoteServer -Framework $Framework
+    $profiles = Get-ProfilePaths -Framework $Framework -Payload $Payload -Run $Run
+    foreach ($remotePath in $profiles.Values) {
+        Invoke-SSH -HostName $ServerHost -Command "rm -f -- '$remotePath'" -IgnoreStandardError | Out-Null
+    }
+    Start-RemoteServer -Framework $Framework -CPUProfile $profiles["CPUProfile"] -RuntimeTrace $profiles["RuntimeTrace"]
     try {
         Invoke-Client -Framework $Framework -Payload $Payload
     } finally {
-        Stop-RemoteServer
+        try {
+            Stop-RemoteServer
+        } finally {
+            Receive-Profiles -Paths $profiles
+        }
     }
     if ($CooldownSeconds -gt 0) {
         Start-Sleep -Seconds $CooldownSeconds
     }
 }
 
-foreach ($value in @($ClientHost, $ClientAddress, $ServerHost, $SSHUser, $ServerRepo, $ClientRepo, $ServerScript, $ServerBindAddress, $TargetAddress, $ClientCPUSet, $ServerCPUSet, $GnalloyBossCPUSet, $GnalloyWorkerCPUSet, $ClientUdpLoad)) {
+foreach ($value in @($ClientHost, $ClientAddress, $ServerHost, $SSHUser, $ServerRepo, $ClientRepo, $ServerScript, $ServerBindAddress, $TargetAddress, $ClientCPUSet, $ServerCPUSet, $GnalloyBossCPUSet, $GnalloyWorkerCPUSet, $ClientUdpLoad, $remoteProfileDirectory)) {
     Assert-SafeRemoteValue -Name "parameter" -Value $value
 }
 foreach ($payload in $Payloads) {
@@ -240,8 +331,9 @@ try {
     Set-Content -LiteralPath $Output -Value @(
     "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
     "crossHost=true clientHost=$ClientHost clientAddress=$ClientAddress serverHost=$ServerHost serverAddress=$TargetAddress",
-    "connections=$Connections messages=$Messages warmupMessages=$WarmupMessages targetRate=$TargetRate latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds",
+    "connections=$Connections messages=$Messages warmupMessages=$WarmupMessages targetRate=$TargetRate latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds frameworks=$($Frameworks -join ',')",
     "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyBossCPUSet=$GnalloyBossCPUSet gnalloyWorkerCPUSet=$GnalloyWorkerCPUSet gnalloyMaxMessagesPerRead=$GnalloyMaxMessagesPerRead performanceGovernor=$SetPerformanceGovernor",
+    "diagnostics=cpuProfile:$CaptureCPUProfile,runtimeTrace:$CaptureRuntimeTrace profileOutputDirectory=$ProfileOutputDirectory",
     "excludedFrameworks=netpoll,fasthttp reason=no-comparable-udp-server"
 ) -Encoding utf8
 $metadataTemplate = @'
@@ -269,21 +361,14 @@ Add-Content -LiteralPath $Output -Value $pingBaseline -Encoding utf8
 
     foreach ($payload in $Payloads) {
         for ($run = 1; $run -le $Repetitions; $run++) {
-            switch (($run - 1) % 3) {
-                0 {
-                    Invoke-Case -Framework "gnalloy" -Payload $payload -Run $run
-                    Invoke-Case -Framework "gnet" -Payload $payload -Run $run
-                    Invoke-Case -Framework "netty" -Payload $payload -Run $run
-                }
-                1 {
-                    Invoke-Case -Framework "gnet" -Payload $payload -Run $run
-                    Invoke-Case -Framework "netty" -Payload $payload -Run $run
-                    Invoke-Case -Framework "gnalloy" -Payload $payload -Run $run
-                }
-                2 {
-                    Invoke-Case -Framework "netty" -Payload $payload -Run $run
-                    Invoke-Case -Framework "gnalloy" -Payload $payload -Run $run
-                    Invoke-Case -Framework "gnet" -Payload $payload -Run $run
+            $orders = @(
+                @("gnalloy", "gnet", "netty"),
+                @("gnet", "netty", "gnalloy"),
+                @("netty", "gnalloy", "gnet")
+            )
+            foreach ($framework in $orders[($run - 1) % 3]) {
+                if ($Frameworks -contains $framework) {
+                    Invoke-Case -Framework $framework -Payload $payload -Run $run
                 }
             }
         }

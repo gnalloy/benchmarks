@@ -61,6 +61,13 @@ To validate UDP over the LAN with fixed host roles, run the common client on Deb
 .\scripts\run-cross-host-udp-common-client.ps1 -TargetRate 60000
 ```
 
+For diagnosis, select only Gnalloy and capture one probe type per run. Profiles are written below the server checkout and downloaded to `reports/raw/cross-host-profiles`; instrumented results must not be compared with normal performance runs:
+
+```powershell
+.\scripts\run-cross-host-udp-common-client.ps1 -Frameworks gnalloy -Payloads 128 -Repetitions 1 -CaptureCPUProfile
+.\scripts\run-cross-host-udp-common-client.ps1 -Frameworks gnalloy -Payloads 128 -Repetitions 1 -TargetRate 60000 -CaptureRuntimeTrace
+```
+
 The client defaults to CPUs `0,1,2,4`, avoiding its NIC IRQ on CPU 11 and using four distinct physical cores. The runner saves each host's CPU governors, selects `performance` for the run, and restores every original value during cleanup. Cross-host results include both NICs, the switch, and both operating-system network stacks. Keep them separate from same-host CPU-isolated results.
 
 ## API Selection

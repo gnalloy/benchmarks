@@ -13,6 +13,8 @@ GNALLOY_WORKERS="${GNALLOY_WORKERS:-4}"
 GNALLOY_MAX_MESSAGES_PER_READ="${GNALLOY_MAX_MESSAGES_PER_READ:-64}"
 GNALLOY_BOSS_CPU_SET="${GNALLOY_BOSS_CPU_SET:-4}"
 GNALLOY_WORKER_CPU_SET="${GNALLOY_WORKER_CPU_SET:-0,1,4,5}"
+GNALLOY_CPU_PROFILE="${GNALLOY_CPU_PROFILE:-}"
+GNALLOY_RUNTIME_TRACE="${GNALLOY_RUNTIME_TRACE:-}"
 NICE_LEVEL="${NICE_LEVEL:-0}"
 SERVER_PID_FILE="${SERVER_PID_FILE:-/tmp/gnalloy-udp-cross-host.pid}"
 GNALLOY_BENCH="${GNALLOY_BENCH:-${REPO_ROOT}/external/bin/gnalloy-bench}"
@@ -79,10 +81,19 @@ printf '%s\n' "$$" >"${SERVER_PID_FILE}"
 
 case "${FRAMEWORK}" in
   gnalloy)
+    profile_args=()
+    if [[ -n "${GNALLOY_CPU_PROFILE}" ]]; then
+      mkdir -p "$(dirname "${GNALLOY_CPU_PROFILE}")"
+      profile_args+=( -cpuprofile "${GNALLOY_CPU_PROFILE}" )
+    fi
+    if [[ -n "${GNALLOY_RUNTIME_TRACE}" ]]; then
+      mkdir -p "$(dirname "${GNALLOY_RUNTIME_TRACE}")"
+      profile_args+=( -trace "${GNALLOY_RUNTIME_TRACE}" )
+    fi
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${GNALLOY_BENCH}" \
       -protocol udp-echo -server-only=true -addr "${SERVER_ADDR}" -backend epoll -boss 1 \
       -workers "${GNALLOY_WORKERS}" -boss-cpus "${GNALLOY_BOSS_CPU_SET}" -worker-cpus "${GNALLOY_WORKER_CPU_SET}" \
-      -reuseport=true -max-messages-per-read "${GNALLOY_MAX_MESSAGES_PER_READ}" -timeout 5m
+      -reuseport=true -max-messages-per-read "${GNALLOY_MAX_MESSAGES_PER_READ}" -timeout 5m "${profile_args[@]}"
     ;;
   gnet)
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${GNET_BENCH}" \

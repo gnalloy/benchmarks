@@ -10,8 +10,14 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-gnalloy.org/benchmarks v0.0.0-20260902135844-a94ab67370ca h1:JHWE2QZJfAVCi5kQESlXGG0ZmxeDhGJkDjsApMLlgtw=
-gnalloy.org/benchmarks v0.0.0-20260902135844-a94ab67370ca/go.mod h1:uOkrf2xpe57ijQbXbr9BAZZaFTgStiAZoGrCJK5gBC4=
+gnalloy.org/benchmarks v0.0.0-20260902150516-f2dad47149e4 h1:t3EuT1JJtnfpkK8iAP8IA+Qvqja/MeAHbXwCpc1JtkE=
+gnalloy.org/benchmarks v0.0.0-20260902150516-f2dad47149e4/go.mod h1:Qq8Xp583ziQnvMqSuiYOnZgKpXyX4UWBdlqOZnR5sdI=
+gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98 h1:Hilym9O+lbWeRljPkltt4qPTVuvpHJ8AnPEnJbxDItw=
+gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98/go.mod h1:Y5Bk5clhC0i3lilHSjH1bxmc0Ls7fRqSvYf5mV0PXUw=
+gnalloy.org/codec-http1 v0.0.0-20260831155325-667cf0239537 h1:VA1UHimrHonzOOpE4gIwDG0pQSGGKOwHwgzx1JXoVEc=
+gnalloy.org/codec-http1 v0.0.0-20260831155325-667cf0239537/go.mod h1:3P7UGfCb5nkrdaL7KTdRN5yf4LCZBxBXUjntNmD2Ww4=
+gnalloy.org/gnalloy v0.0.0-20260831153720-533bb39b2ad6 h1:YtIsp2u+paX8W0rCuIP71AUtjIC82OAXa0FVF8loNbk=
+gnalloy.org/gnalloy v0.0.0-20260831153720-533bb39b2ad6/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
 golang.org/x/sys v0.47.0 h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=
 golang.org/x/sys v0.47.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=

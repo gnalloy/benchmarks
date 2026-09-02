@@ -18,10 +18,16 @@ gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81 h1:F898MYKxFmbSkz+TQM
 gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81/go.mod h1:92crEBwS/e4gpNyEIokXDmYi7tg1CJnhM3WI2gwsLsw=
 gnalloy.org/gnalloy v0.0.0-20260831153720-533bb39b2ad6 h1:YtIsp2u+paX8W0rCuIP71AUtjIC82OAXa0FVF8loNbk=
 gnalloy.org/gnalloy v0.0.0-20260831153720-533bb39b2ad6/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
+gnalloy.org/handler-tls v0.0.0-20260901014432-f6a2b3a7ac50 h1:NPbumg2oKkDB8cFN56j0+8DnTizPcNkkKl2eDmsVYcA=
+gnalloy.org/handler-tls v0.0.0-20260901014432-f6a2b3a7ac50/go.mod h1:KYkjLY+u83XcfJMvPE/bvTQIGAYodzsmcD1/iYDgYj0=
 gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f h1:5l35q8Bxsn+Xv022nJqF8GIoj3jU6xDKZplTu44VK2c=
 gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f/go.mod h1:Hp87MhDuVqXEA3UAAsPhaGCX16fTuOFfT40SBjqS8zc=
 gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b h1:Jak/BDZxVrpkUIbDR3HLw2MTgHubaEuR8zZht7wkDOM=
 gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b/go.mod h1:TchYby9N52E0m9kKaqDzrHWDh91n8NjyyqIVbzCtkHo=
+gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3 h1:OgvNwgeDUBH/8/ieUZMaBPzsxa2k0AChZO8T+8JXa0k=
+gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3/go.mod h1:nR7rAmU0ZsUb5g04Khl97HYtNdlRmYOGZ2d3pX/aTN0=
+gnalloy.org/transport-zerocopy v0.0.0-20260831155854-78135ae02cc4 h1:WIEc0eq25LyEW2UTIO3m/48wpKE+jqA8iXVzNlsUY/8=
+gnalloy.org/transport-zerocopy v0.0.0-20260831155854-78135ae02cc4/go.mod h1:BFVVe08bATHMx9ZzcKjEYJQw5D2KDLAFrY082SJu3MM=
 go.uber.org/mock v0.5.2 h1:LbtPTcP8A5k9WPXj54PPPbjcI4Y6lhyOZXn+VS7wNko=
 go.uber.org/mock v0.5.2/go.mod h1:wLlUxC2vVTPTaE3UD51E0BGOAElKrILxhVSDYQLld5o=
 golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=

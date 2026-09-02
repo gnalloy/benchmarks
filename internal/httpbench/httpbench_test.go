@@ -2,9 +2,11 @@ package httpbench
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -56,6 +58,57 @@ func TestRunSaturatedAndPaced(t *testing.T) {
 				t.Fatalf("scheduleDelay=%+v", result.ScheduleDelay)
 			}
 		})
+	}
+}
+
+func TestRunTLSUsesALPN(t *testing.T) {
+	body := ResponseBody(16)
+	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Content-Type", "application/octet-stream")
+		_, _ = writer.Write(body)
+	}))
+	defer server.Close()
+
+	result, err := Run(context.Background(), Config{
+		Addr:              server.Listener.Addr().String(),
+		ServerName:        "localhost",
+		Payload:           16,
+		Connections:       1,
+		Messages:          2,
+		WarmupMessages:    1,
+		LatencySampleRate: 1,
+		Timeout:           5 * time.Second,
+		TLS: &tls.Config{
+			ServerName:         "localhost",
+			InsecureSkipVerify: true,
+			MinVersion:         tls.VersionTLS13,
+			NextProtos:         []string{"http/1.1"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TotalRequests != 2 || result.Errors != 0 || result.NegotiatedProtocol != "http/1.1" {
+		t.Fatalf("result=%+v", result)
+	}
+}
+
+func TestRunRejectsUnexpectedResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		_, _ = writer.Write([]byte("unexpected"))
+	}))
+	defer server.Close()
+
+	_, err := Run(context.Background(), Config{
+		Addr:              server.Listener.Addr().String(),
+		Payload:           16,
+		Connections:       1,
+		Messages:          1,
+		LatencySampleRate: 1,
+		Timeout:           5 * time.Second,
+	})
+	if err == nil || err.Error() != "httpbench: response body mismatch" {
+		t.Fatalf("err=%v", err)
 	}
 }
 

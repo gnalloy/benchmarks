@@ -22,7 +22,12 @@ func Run(parent context.Context, cfg Config) (Result, error) {
 	}
 	ctx, cancel := context.WithTimeout(parent, cfg.Timeout)
 	defer cancel()
-	clients, err := prepareClients(ctx, cfg)
+	group, err := newClientGroup(cfg.Connections)
+	if err != nil {
+		return Result{Errors: 1}, err
+	}
+	defer shutdownClientGroup(group)
+	clients, err := prepareClients(ctx, cfg, group)
 	if err != nil {
 		return Result{Errors: 1}, err
 	}
@@ -149,7 +154,7 @@ func runSaturatedClient(ctx context.Context, client *client, messages int, sampl
 		if record {
 			started = time.Now()
 		}
-		if err := exchange(client); err != nil {
+		if err := exchange(ctx, client); err != nil {
 			return completed, err
 		}
 		if record {
@@ -182,7 +187,7 @@ func runPacedClient(ctx context.Context, client *client, clientID int, messages 
 		if record {
 			sendStarted = time.Now()
 		}
-		if err := exchange(client); err != nil {
+		if err := exchange(ctx, client); err != nil {
 			return completed, err
 		}
 		if record {
@@ -196,6 +201,6 @@ func runPacedClient(ctx context.Context, client *client, clientID int, messages 
 	return completed, nil
 }
 
-func exchange(client *client) error {
-	return client.protocol.exchange()
+func exchange(ctx context.Context, client *client) error {
+	return client.protocol.exchange(ctx)
 }

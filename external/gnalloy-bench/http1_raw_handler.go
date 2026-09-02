@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gnalloy.org/benchmarks/external/internal/benchhttp"
+	"gnalloy.org/benchmarks/internal/httpbench"
 	"gnalloy.org/gnalloy/buffer"
 	"gnalloy.org/gnalloy/channel"
 )
@@ -11,12 +11,12 @@ import (
 // 该 handler 只用于外部性能对标：它复用 Gnalloy transport/pipeline/TLS，但避免通用
 // Request/Headers/Response 对象编解码，使场景与 gnet/netpoll 的轻量 HTTP/1 实现对齐。
 type http1RawHandler struct {
-	state    benchhttp.ServerState
+	state    httpbench.ServerState
 	response []byte
 }
 
 func newHTTP1RawHandler(payload int) *http1RawHandler {
-	return &http1RawHandler{response: benchhttp.ResponseBytes(payload)}
+	return &http1RawHandler{response: httpbench.ResponseBytes(payload)}
 }
 
 func (h *http1RawHandler) ChannelRead(ctx *channel.HandlerContext, msg any) {

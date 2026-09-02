@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"gnalloy.org/benchmarks/external/internal/benchhttp"
+	"gnalloy.org/benchmarks/internal/httpbench"
 
 	"github.com/cloudwego/netpoll"
 )
@@ -77,7 +77,7 @@ func startEchoServer(ctx context.Context, cfg config) (*echoServer, error) {
 
 type netpollHTTPState struct {
 	once   sync.Once
-	parser benchhttp.ServerState
+	parser httpbench.ServerState
 }
 
 func handleHTTP1(conn netpoll.Connection, response []byte, states *sync.Map) error {
@@ -116,7 +116,7 @@ func netpollHTTPResponse(cfg config) []byte {
 	if cfg.Protocol != "http1" {
 		return nil
 	}
-	return benchhttp.ResponseBytes(cfg.Payload)
+	return httpbench.ResponseBytes(cfg.Payload)
 }
 
 func (s *echoServer) stop() {

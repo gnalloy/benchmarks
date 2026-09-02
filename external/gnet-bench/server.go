@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"gnalloy.org/benchmarks/external/internal/benchhttp"
+	"gnalloy.org/benchmarks/internal/httpbench"
 
 	"github.com/panjf2000/gnet/v2"
 )
@@ -95,7 +95,7 @@ func (h *gnetEchoHandler) OnBoot(eng gnet.Engine) gnet.Action {
 
 func (h *gnetEchoHandler) OnOpen(c gnet.Conn) ([]byte, gnet.Action) {
 	if h.response != nil {
-		c.SetContext(&benchhttp.ServerState{})
+		c.SetContext(&httpbench.ServerState{})
 	}
 	return nil, gnet.None
 }
@@ -122,7 +122,7 @@ func (h *gnetEchoHandler) OnTraffic(c gnet.Conn) gnet.Action {
 }
 
 func (h *gnetEchoHandler) onHTTP1Traffic(c gnet.Conn, buf []byte) gnet.Action {
-	state, ok := c.Context().(*benchhttp.ServerState)
+	state, ok := c.Context().(*httpbench.ServerState)
 	if !ok || state == nil {
 		return gnet.Close
 	}
@@ -144,5 +144,5 @@ func gnetHTTPResponse(cfg config) []byte {
 	if cfg.Protocol != "http1" {
 		return nil
 	}
-	return benchhttp.ResponseBytes(cfg.Payload)
+	return httpbench.ResponseBytes(cfg.Payload)
 }

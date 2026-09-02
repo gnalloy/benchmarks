@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 
-	"gnalloy.org/benchmarks/external/internal/benchhttp"
+	"gnalloy.org/benchmarks/internal/httpbench"
 )
 
 func runHTTP1Load(ctx context.Context, addr string, cfg config) (benchResult, error) {
-	result, err := benchhttp.RunLoad(ctx, benchhttp.Config{
+	result, err := httpbench.Run(ctx, httpbench.Config{
 		Addr:              addr,
 		Payload:           cfg.Payload,
 		Connections:       cfg.Connections,

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"gnalloy.org/benchmarks/external/internal/benchhttp"
+	"gnalloy.org/benchmarks/internal/httpbench"
 )
 
 type benchResult struct {
@@ -34,7 +34,7 @@ func runBenchmark(parent context.Context, cfg config) (benchResult, error) {
 	defer server.stop()
 
 	resourcesBefore := captureResourceSnapshot()
-	httpConfig := benchhttp.Config{
+	httpConfig := httpbench.Config{
 		Addr:              server.addr,
 		ServerName:        benchtlsServerName(),
 		Payload:           cfg.Payload,
@@ -51,7 +51,7 @@ func runBenchmark(parent context.Context, cfg config) (benchResult, error) {
 		}
 		httpConfig.TLS = tlsConfig
 	}
-	result, err := benchhttp.RunLoad(ctx, httpConfig)
+	result, err := httpbench.Run(ctx, httpConfig)
 	return benchResult{
 		TotalRequests: result.TotalRequests,
 		Errors:        result.Errors,

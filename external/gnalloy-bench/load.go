@@ -12,7 +12,7 @@ import (
 
 	"gnalloy.org/benchmarks/external/internal/benchh2"
 	"gnalloy.org/benchmarks/external/internal/benchh3"
-	"gnalloy.org/benchmarks/external/internal/benchhttp"
+	"gnalloy.org/benchmarks/internal/httpbench"
 )
 
 type benchResult struct {
@@ -71,7 +71,7 @@ func runHTTP1Benchmark(ctx context.Context, cfg config) (benchResult, error) {
 	defer server.stop()
 
 	resourcesBefore := captureResourceSnapshot()
-	httpConfig := benchhttp.Config{
+	httpConfig := httpbench.Config{
 		Addr:              server.addr,
 		ServerName:        tlsServerName(),
 		Payload:           cfg.Payload,
@@ -88,7 +88,7 @@ func runHTTP1Benchmark(ctx context.Context, cfg config) (benchResult, error) {
 		}
 		httpConfig.TLS = tlsConfig
 	}
-	result, err := benchhttp.RunLoad(ctx, httpConfig)
+	result, err := httpbench.Run(ctx, httpConfig)
 	out := benchResult{
 		TotalRequests: result.TotalRequests,
 		Errors:        result.Errors,

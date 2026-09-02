@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"gnalloy.org/benchmarks/external/internal/benchhttp"
+	"gnalloy.org/benchmarks/internal/httpbench"
 	"gnalloy.org/gnalloy/buffer"
 	"gnalloy.org/gnalloy/channel"
 )
@@ -16,12 +16,12 @@ func TestHTTP1RawHandlerWritesFixedResponse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ch.Pipeline().FireChannelRead(rawHTTP1Buf(benchhttp.RequestBytes("127.0.0.1")))
+	ch.Pipeline().FireChannelRead(rawHTTP1Buf(httpbench.RequestBytes("127.0.0.1")))
 
 	if len(sink.writes) != 1 {
 		t.Fatalf("writes=%d, want 1", len(sink.writes))
 	}
-	want := benchhttp.ResponseBytes(128)
+	want := httpbench.ResponseBytes(128)
 	if !bytes.Equal(sink.writes[0], want) {
 		t.Fatalf("response len=%d, want %d", len(sink.writes[0]), len(want))
 	}
@@ -37,7 +37,7 @@ func TestHTTP1RawHandlerHandlesFragmentedRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := benchhttp.RequestBytes("127.0.0.1")
+	req := httpbench.RequestBytes("127.0.0.1")
 	ch.Pipeline().FireChannelRead(rawHTTP1Buf(req[:len(req)-2]))
 	if len(sink.writes) != 0 {
 		t.Fatalf("writes=%d before request complete", len(sink.writes))
@@ -47,7 +47,7 @@ func TestHTTP1RawHandlerHandlesFragmentedRequest(t *testing.T) {
 	if len(sink.writes) != 1 {
 		t.Fatalf("writes=%d, want 1", len(sink.writes))
 	}
-	if !bytes.Equal(sink.writes[0], benchhttp.ResponseBytes(16)) {
+	if !bytes.Equal(sink.writes[0], httpbench.ResponseBytes(16)) {
 		t.Fatal("unexpected response")
 	}
 }
@@ -59,13 +59,13 @@ func TestHTTP1RawHandlerBatchesResponsesFromOneRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := benchhttp.RequestBytes("127.0.0.1")
+	req := httpbench.RequestBytes("127.0.0.1")
 	ch.Pipeline().FireChannelRead(rawHTTP1Buf(append(req, req...)))
 
 	if len(sink.writes) != 1 {
 		t.Fatalf("writes=%d, want 1", len(sink.writes))
 	}
-	want := append(benchhttp.ResponseBytes(32), benchhttp.ResponseBytes(32)...)
+	want := append(httpbench.ResponseBytes(32), httpbench.ResponseBytes(32)...)
 	if !bytes.Equal(sink.writes[0], want) {
 		t.Fatalf("batched response len=%d, want %d", len(sink.writes[0]), len(want))
 	}

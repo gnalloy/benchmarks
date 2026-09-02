@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"gnalloy.org/benchmarks/external/internal/benchhttp"
+	"gnalloy.org/benchmarks/internal/httpbench"
 	"gnalloy.org/codec-http1"
 	"gnalloy.org/gnalloy/bootstrap"
 	"gnalloy.org/gnalloy/buffer"
@@ -77,7 +77,7 @@ func addHTTP1CodecPipeline(ch channel.Channel, cfg config) error {
 		return err
 	}
 	return ch.Pipeline().AddLast("handler", http1Handler{
-		body: benchhttp.ResponseBody(cfg.Payload),
+		body: httpbench.ResponseBody(cfg.Payload),
 		headers: http1.Headers{
 			"Content-Type": "application/octet-stream",
 		},

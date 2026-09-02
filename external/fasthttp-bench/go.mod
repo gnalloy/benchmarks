@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/valyala/fasthttp v1.73.0
-	gnalloy.org/benchmarks v0.0.0-20260902202644-2b339d306fbe
+	gnalloy.org/benchmarks v0.0.0-20260902210848-86a78a44ee7c
 )
 
 require (
@@ -12,7 +12,7 @@ require (
 	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98 // indirect
-	gnalloy.org/codec-http1 v0.0.0-20260902202452-920dcd486837 // indirect
+	gnalloy.org/codec-http1 v0.0.0-20260902210723-976908e32b9c // indirect
 	gnalloy.org/gnalloy v0.0.0-20260902193450-65ce15f6ff60 // indirect
 	gnalloy.org/handler-tls v0.0.0-20260902193648-ea5c653ee1e6 // indirect
 	gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3 // indirect

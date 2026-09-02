@@ -16,6 +16,7 @@ CONNECTIONS="${CONNECTIONS:-64}"
 MESSAGES="${MESSAGES:-20000}"
 WARMUP_MESSAGES="${WARMUP_MESSAGES:-1000}"
 LATENCY_SAMPLE_RATE="${LATENCY_SAMPLE_RATE:-64}"
+TARGET_RATE="${TARGET_RATE:-0}"
 REPETITIONS="${REPETITIONS:-5}"
 EVENT_LOOPS="${EVENT_LOOPS:-4}"
 GNALLOY_WORKERS="${GNALLOY_WORKERS:-3}"
@@ -233,7 +234,7 @@ run_case() {
   taskset -c "${CLIENT_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${CLIENT_GOMAXPROCS}" "${UDP_LOAD}" \
     -server-framework "${framework}" -addr "${SERVER_ADDR}" -payload "${payload}" \
     -connections "${CONNECTIONS}" -messages "${MESSAGES}" -warmup-messages "${WARMUP_MESSAGES}" \
-    -latency-sample-rate "${LATENCY_SAMPLE_RATE}" -timeout 5m | tee -a "${OUTPUT}"
+    -latency-sample-rate "${LATENCY_SAMPLE_RATE}" -target-rate "${TARGET_RATE}" -timeout 5m | tee -a "${OUTPUT}"
   stop_server
   sleep "${COOLDOWN_SECONDS}"
 }
@@ -278,6 +279,7 @@ require_positive_integer CONNECTIONS "${CONNECTIONS}"
 require_positive_integer MESSAGES "${MESSAGES}"
 require_non_negative_integer WARMUP_MESSAGES "${WARMUP_MESSAGES}"
 require_non_negative_integer LATENCY_SAMPLE_RATE "${LATENCY_SAMPLE_RATE}"
+require_non_negative_integer TARGET_RATE "${TARGET_RATE}"
 require_positive_integer REPETITIONS "${REPETITIONS}"
 require_positive_integer EVENT_LOOPS "${EVENT_LOOPS}"
 require_positive_integer GNALLOY_WORKERS "${GNALLOY_WORKERS}"
@@ -309,8 +311,8 @@ SERVER_LOG="$(mktemp "${TMPDIR:-/tmp}/gnalloy-udp-server.XXXXXX")"
     "${SERVER_CPU_SET}" "${CLIENT_CPU_SET}" "${SERVER_GOMAXPROCS}" "${CLIENT_GOMAXPROCS}" "${EVENT_LOOPS}"
   printf 'gnalloyWorkers=%s gnalloyBossCPUSet=%s gnalloyWorkerCPUSet=%s gnalloyMaxMessagesPerRead=%s\n' \
     "${GNALLOY_WORKERS}" "${GNALLOY_BOSS_CPU_SET}" "${GNALLOY_WORKER_CPU_SET}" "${GNALLOY_MAX_MESSAGES_PER_READ}"
-  printf 'connections=%s messages=%s warmupMessages=%s latencySampleRate=%s repetitions=%s cooldownSeconds=%s niceLevel=%s\n' \
-    "${CONNECTIONS}" "${MESSAGES}" "${WARMUP_MESSAGES}" "${LATENCY_SAMPLE_RATE}" "${REPETITIONS}" "${COOLDOWN_SECONDS}" "${NICE_LEVEL}"
+  printf 'connections=%s messages=%s warmupMessages=%s targetRate=%s latencySampleRate=%s repetitions=%s cooldownSeconds=%s niceLevel=%s\n' \
+    "${CONNECTIONS}" "${MESSAGES}" "${WARMUP_MESSAGES}" "${TARGET_RATE}" "${LATENCY_SAMPLE_RATE}" "${REPETITIONS}" "${COOLDOWN_SECONDS}" "${NICE_LEVEL}"
   printf 'excludedFrameworks=netpoll,fasthttp reason=no-comparable-udp-server\n'
   sha256sum "${GNALLOY_BENCH}" "${GNET_BENCH}" "${NETTY_BENCH_JAR}" "${UDP_LOAD}"
   go version "${GNALLOY_BENCH}" 2>/dev/null || true

@@ -103,6 +103,7 @@ func runPhase(ctx context.Context, clients []client, cfg Config, messages int, s
 	results := make([]clientResult, len(clients))
 	var wait sync.WaitGroup
 	start := make(chan struct{})
+	pacer := newPhasePacer(time.Time{}, len(clients), cfg.TargetRate)
 	for id := range clients {
 		id := id
 		wait.Add(1)
@@ -113,9 +114,10 @@ func runPhase(ctx context.Context, clients []client, cfg Config, messages int, s
 				samples[id] = make([]int64, 0, sampleCapacity(messages, cfg.LatencySampleRate))
 				clientSamples = &samples[id]
 			}
-			results[id].completed, results[id].err = runClient(ctx, clients[id], id, messages, cfg.LatencySampleRate, start, clientSamples)
+			results[id].completed, results[id].err = runClient(ctx, clients[id], id, messages, cfg.LatencySampleRate, start, &pacer, clientSamples)
 		}()
 	}
+	pacer.start = time.Now()
 	close(start)
 	wait.Wait()
 	var total int64
@@ -128,12 +130,19 @@ func runPhase(ctx context.Context, clients []client, cfg Config, messages int, s
 	return total, nil
 }
 
-func runClient(ctx context.Context, client client, id int, messages int, sampleRate int, start <-chan struct{}, samples *[]int64) (int64, error) {
+func runClient(ctx context.Context, client client, id int, messages int, sampleRate int, start <-chan struct{}, pacer *phasePacer, samples *[]int64) (int64, error) {
 	select {
 	case <-start:
 	case <-ctx.Done():
 		return 0, ctx.Err()
 	}
+	if pacer.enabled() {
+		return runPacedClient(ctx, client, id, messages, sampleRate, pacer, samples)
+	}
+	return runSaturatedClient(ctx, client, id, messages, sampleRate, samples)
+}
+
+func runSaturatedClient(ctx context.Context, client client, id int, messages int, sampleRate int, samples *[]int64) (int64, error) {
 	var completed int64
 	for index := 0; index < messages; index++ {
 		if err := ctx.Err(); err != nil {
@@ -157,6 +166,45 @@ func runClient(ctx context.Context, client client, id int, messages int, sampleR
 		}
 		if record {
 			elapsed := time.Since(started).Nanoseconds()
+			if elapsed <= 0 {
+				elapsed = 1
+			}
+			*samples = append(*samples, elapsed)
+		}
+		completed++
+	}
+	return completed, nil
+}
+
+func runPacedClient(ctx context.Context, client client, id int, messages int, sampleRate int, pacer *phasePacer, samples *[]int64) (int64, error) {
+	timer := time.NewTimer(time.Hour)
+	if !timer.Stop() {
+		<-timer.C
+	}
+	defer timer.Stop()
+	var completed int64
+	for index := 0; index < messages; index++ {
+		if err := ctx.Err(); err != nil {
+			return completed, err
+		}
+		client.payload[0] = byte(id + index)
+		deadline, err := pacer.wait(ctx, timer, id, index)
+		if err != nil {
+			return completed, err
+		}
+		record := samples != nil && sampleRate > 0 && index%sampleRate == 0
+		if err := writeFull(client.conn, client.payload); err != nil {
+			return completed, err
+		}
+		n, err := client.conn.Read(client.reply)
+		if err != nil {
+			return completed, err
+		}
+		if n != len(client.payload) || !bytes.Equal(client.reply[:n], client.payload) {
+			return completed, fmt.Errorf("udpbench: echo mismatch")
+		}
+		if record {
+			elapsed := time.Since(deadline).Nanoseconds()
 			if elapsed <= 0 {
 				elapsed = 1
 			}

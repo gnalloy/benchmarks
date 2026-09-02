@@ -43,6 +43,17 @@ Linux 矩阵覆盖 TCP、UDP、QUIC stream、HTTP/1.1、HTTP/2、HTTP/3、HTTPS 
 
 脚本任意时刻只运行一个进程，在五轮采样中交替 Gnalloy/netpoll 的先后顺序，并记录主机信息、参数、二进制哈希、吞吐和延迟。payload、负载、冷却时间、可执行文件、输出路径和进程优先级均可通过环境变量设置。脚本不会修改 CPU governor 或停止主机服务。已验证的 16KiB 结果和 syscall 分析见 `reports/linux-tcp-read-write-optimization.md`。
 
+## Linux UDP 专项测试
+
+构建 `external/bin/gnalloy-bench`、`external/bin/gnet-bench`、`external/bin/netty-bench.jar` 和 `external/bin/udp-load` 后，在同一台 Linux 主机用统一客户端测试全部 UDP 服务端：
+
+```bash
+./scripts/run-linux-udp-common-client.sh
+TARGET_RATE=60000 ./scripts/run-linux-udp-common-client.sh
+```
+
+默认模式测量饱和吞吐。`TARGET_RATE` 为等负载延迟测试设置共享的聚合请求速率。固定速率模式从每个请求的计划发送时刻开始统计延迟，因此调度延迟和积压不会被遗漏。脚本将服务端和客户端固定到互不重叠的逻辑 CPU 集合，轮换框架顺序，严格串行执行案例，并记录 CPU 拓扑、governor、参数和二进制哈希。Netpoll 与 fasthttp 的 benchmark harness 没有可比的 UDP 服务端，因此保持排除。
+
 ## API 选择
 
 通过 API 清单选择当前协议路径需要的具体构造函数或 option 类型：

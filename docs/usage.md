@@ -43,6 +43,17 @@ After building `external/bin/gnalloy-bench` and `external/bin/netpoll-bench`, ru
 
 The script runs one process at a time, alternates Gnalloy/netpoll order across five repetitions, and records host metadata, parameters, binary hashes, throughput, and latency. Environment variables control payloads, load, cooldown, executable paths, output path, and process priority. It does not change the CPU governor or stop host services. See `reports/linux-tcp-read-write-optimization.md` for the verified 16KiB result and syscall analysis.
 
+## Focused Linux UDP Benchmark
+
+Build `external/bin/gnalloy-bench`, `external/bin/gnet-bench`, `external/bin/netty-bench.jar`, and `external/bin/udp-load`, then run all UDP servers through the same client on one Linux host:
+
+```bash
+./scripts/run-linux-udp-common-client.sh
+TARGET_RATE=60000 ./scripts/run-linux-udp-common-client.sh
+```
+
+The default run measures saturation throughput. `TARGET_RATE` sets a shared aggregate request rate for a comparable latency run. Fixed-rate latency starts at each request's scheduled send time, so scheduling delay and backlog remain visible instead of being omitted. The script pins server and client processes to disjoint logical CPU sets, rotates framework order, runs cases serially, and records the CPU topology, governor, parameters, and binary hashes. Netpoll and fasthttp remain excluded because their benchmark harnesses do not provide comparable UDP servers.
+
 ## API Selection
 
 Use the API inventory to choose the exact constructor or option type for your protocol path:

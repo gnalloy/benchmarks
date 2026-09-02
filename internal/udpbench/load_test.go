@@ -35,11 +35,37 @@ func TestConfigValidation(t *testing.T) {
 	tests := []Config{
 		{},
 		{Addr: "127.0.0.1:1", Payload: 1, Connections: 1, Messages: 1},
+		{Addr: "127.0.0.1:1", Payload: 1, Connections: 1, Messages: 1, TargetRate: -1, Timeout: time.Second},
 	}
 	for _, cfg := range tests {
 		if err := cfg.Validate(); !errors.Is(err, ErrInvalidConfig) {
 			t.Fatalf("config=%+v error=%v", cfg, err)
 		}
+	}
+}
+
+func TestRunPacesAggregateTargetRate(t *testing.T) {
+	conn := startEchoServer(t)
+	cfg := DefaultConfig()
+	cfg.Addr = conn.LocalAddr().String()
+	cfg.Payload = 32
+	cfg.Connections = 2
+	cfg.Messages = 5
+	cfg.WarmupMessages = 0
+	cfg.LatencySampleRate = 1
+	cfg.TargetRate = 100
+	cfg.Timeout = 5 * time.Second
+
+	started := time.Now()
+	result, err := Run(context.Background(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if elapsed := time.Since(started); elapsed < 70*time.Millisecond {
+		t.Fatalf("elapsed=%s, want aggregate pacing", elapsed)
+	}
+	if result.TotalRequests != 10 || result.Errors != 0 || result.Latency.Samples != 10 {
+		t.Fatalf("result=%+v", result)
 	}
 }
 

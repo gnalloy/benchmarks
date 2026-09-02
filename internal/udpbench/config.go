@@ -16,6 +16,7 @@ type Config struct {
 	Messages          int
 	WarmupMessages    int
 	LatencySampleRate int
+	TargetRate        int64
 	Timeout           time.Duration
 }
 
@@ -41,8 +42,8 @@ func (c Config) Validate() error {
 	if c.Connections > int(^uint(0)>>1)/c.Messages {
 		return fmt.Errorf("%w: connections * messages overflows int", ErrInvalidConfig)
 	}
-	if c.WarmupMessages < 0 || c.LatencySampleRate < 0 {
-		return fmt.Errorf("%w: warmup and latency sample rate must not be negative", ErrInvalidConfig)
+	if c.WarmupMessages < 0 || c.LatencySampleRate < 0 || c.TargetRate < 0 {
+		return fmt.Errorf("%w: warmup, latency sample rate and target rate must not be negative", ErrInvalidConfig)
 	}
 	if c.Timeout <= 0 {
 		return fmt.Errorf("%w: timeout must be positive", ErrInvalidConfig)

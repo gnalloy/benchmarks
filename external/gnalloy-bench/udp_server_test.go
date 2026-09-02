@@ -5,9 +5,18 @@ import (
 	"testing"
 
 	"gnalloy.org/gnalloy/buffer"
+	"gnalloy.org/gnalloy/channel"
 	"gnalloy.org/gnalloy/channel/embedded"
 	"gnalloy.org/transport-udp"
 )
+
+func TestUDPChildOptionsApplyReadBatchLimit(t *testing.T) {
+	options := channel.NewChannelOptions()
+	options.Apply(udpChildOptions(config{MaxMessagesPerRead: 7})...)
+	if got := channel.OptionMaxMessagesPerRead.Get(options); got != 7 {
+		t.Fatalf("maxMessagesPerRead=%d, want 7", got)
+	}
+}
 
 func TestUDPEchoHandlerFlushesReadBatchOnce(t *testing.T) {
 	ch, err := embedded.New(udpEchoHandler{})

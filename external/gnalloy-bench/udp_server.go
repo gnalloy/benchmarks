@@ -37,10 +37,17 @@ func bindUDPEchoServer(ctx context.Context, cfg config, boss *transport.EventLoo
 	return bootstrap.NewServerBootstrap().
 		Group(boss, workers).
 		Transport(udp.NewTransport(udpConfig)).
+		ChildOption(udpChildOptions(cfg)...).
 		ChildInitializer(func(ch channel.Channel) error {
 			return ch.Pipeline().AddLast("echo", udpEchoHandler{})
 		}).
 		BindContext(ctx, cfg.Addr)
+}
+
+func udpChildOptions(cfg config) []channel.ChannelOptionAssignment {
+	return []channel.ChannelOptionAssignment{
+		channel.OptionMaxMessagesPerRead.Assignment(cfg.MaxMessagesPerRead),
+	}
 }
 
 type udpEchoHandler struct{}

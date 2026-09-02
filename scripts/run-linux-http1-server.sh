@@ -6,6 +6,10 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 FRAMEWORK="${1:-}"
 SERVER_ADDR="${SERVER_ADDR:-0.0.0.0:19091}"
+PROTOCOL="${PROTOCOL:-http1}"
+TLS_VERSION="${TLS_VERSION:-1.3}"
+ALPN="${ALPN:-http/1.1}"
+CIPHER_SUITES="${CIPHER_SUITES:-}"
 PAYLOAD="${PAYLOAD:-128}"
 SERVER_CPU_SET="${SERVER_CPU_SET:-0,1,4,5}"
 SERVER_GOMAXPROCS="${SERVER_GOMAXPROCS:-4}"
@@ -68,6 +72,20 @@ require_positive_integer PAYLOAD "${PAYLOAD}"
 require_positive_integer SERVER_GOMAXPROCS "${SERVER_GOMAXPROCS}"
 require_positive_integer EVENT_LOOPS "${EVENT_LOOPS}"
 require_positive_integer GNALLOY_WORKERS "${GNALLOY_WORKERS}"
+if [[ "${PROTOCOL}" != "http1" && "${PROTOCOL}" != "https1" ]]; then
+  printf 'unsupported HTTP/1 family protocol: %s\n' "${PROTOCOL}" >&2
+  exit 1
+fi
+tls_args=()
+netty_tls_args=()
+if [[ "${PROTOCOL}" == "https1" ]]; then
+  tls_args+=( -tls-version "${TLS_VERSION}" -alpn "${ALPN}" )
+  netty_tls_args+=( --tls-version "${TLS_VERSION}" --alpn "${ALPN}" )
+  if [[ -n "${CIPHER_SUITES}" ]]; then
+    tls_args+=( -cipher-suites "${CIPHER_SUITES}" )
+    netty_tls_args+=( --cipher-suites "${CIPHER_SUITES}" )
+  fi
+fi
 if [[ ! "${NICE_LEVEL}" =~ ^-?[0-9]+$ ]] || ((NICE_LEVEL < -20 || NICE_LEVEL > 19)); then
   printf 'NICE_LEVEL must be between -20 and 19: %s\n' "${NICE_LEVEL}" >&2
   exit 1
@@ -91,17 +109,17 @@ case "${FRAMEWORK}" in
       profile_args+=( -trace "${GNALLOY_RUNTIME_TRACE}" )
     fi
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${GNALLOY_BENCH}" \
-      -protocol http1 -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -backend epoll -boss 1 \
+      -protocol "${PROTOCOL}" -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -backend epoll -boss 1 \
       -workers "${GNALLOY_WORKERS}" -boss-cpus "${GNALLOY_BOSS_CPU_SET}" \
-      -worker-cpus "${GNALLOY_WORKER_CPU_SET}" -reuseport=true -timeout 5m "${profile_args[@]}"
+      -worker-cpus "${GNALLOY_WORKER_CPU_SET}" -reuseport=true -timeout 5m "${tls_args[@]}" "${profile_args[@]}"
     ;;
   fasthttp)
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${FASTHTTP_BENCH}" \
-      -protocol http1 -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -timeout 5m
+      -protocol "${PROTOCOL}" -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -timeout 5m "${tls_args[@]}"
     ;;
   netty)
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" "${JAVA_BIN}" -jar "${NETTY_BENCH_JAR}" \
-      --protocol http1 --server-only true --addr "${SERVER_ADDR}" --payload "${PAYLOAD}" --backend epoll \
-      --event-loops "${EVENT_LOOPS}" --timeout 5m
+      --protocol "${PROTOCOL}" --server-only true --addr "${SERVER_ADDR}" --payload "${PAYLOAD}" --backend epoll \
+      --event-loops "${EVENT_LOOPS}" --timeout 5m "${netty_tls_args[@]}"
     ;;
 esac

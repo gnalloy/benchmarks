@@ -11,6 +11,13 @@ param(
     [string]$ServerScript = "./scripts/run-linux-http1-server.sh",
     [string]$ServerBindAddress = "0.0.0.0:19091",
     [string]$TargetAddress = "172.16.8.171:19091",
+    [ValidateSet("http1", "https1")]
+    [string[]]$Protocols = @("http1", "https1"),
+    [ValidateSet("1.1", "1.2", "1.3")]
+    [string[]]$TLSVersions = @("1.1", "1.2", "1.3"),
+    [string]$HTTP1ALPN = "http/1.1",
+    [string]$TLS11Cipher = "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+    [string]$TLS12Cipher = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
     [int[]]$Payloads = @(128, 1024),
     [ValidateRange(1, [int]::MaxValue)]
     [int]$Connections = 64,
@@ -57,7 +64,7 @@ if ([string]::IsNullOrWhiteSpace($ClientHTTP1Load)) {
 }
 if ([string]::IsNullOrWhiteSpace($Output)) {
     $mode = if ($TargetRate -gt 0) { "offered-$TargetRate" } else { "saturation" }
-    $Output = Join-Path $repoRoot "reports/raw/linux-cross-host-http1-$mode.out"
+    $Output = Join-Path $repoRoot "reports/raw/linux-cross-host-http1-family-$mode.out"
 }
 if (($CaptureCPUProfile -or $CaptureRuntimeTrace) -and [string]::IsNullOrWhiteSpace($ProfileOutputDirectory)) {
     $ProfileOutputDirectory = Join-Path $repoRoot "reports/raw/cross-host-http1-profiles"
@@ -182,16 +189,28 @@ function Restore-RemoteGovernors {
 }
 
 function Start-RemoteServer {
-    param([string]$Framework, [int]$Payload, [string]$CPUProfile = "", [string]$RuntimeTrace = "")
+    param(
+        [string]$Framework,
+        [string]$Protocol,
+        [string]$TLSVersion,
+        [string]$CipherSuites,
+        [int]$Payload,
+        [string]$CPUProfile = "",
+        [string]$RuntimeTrace = ""
+    )
     Stop-RemoteServer
     $command = @'
 cd '__REMOTE_REPO__'
 : >'__REMOTE_LOG__'
-nohup env SERVER_ADDR='__BIND_ADDR__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
+nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' ALPN='__ALPN__' CIPHER_SUITES='__CIPHER_SUITES__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
 '@
     $command = $command.Replace("__REMOTE_REPO__", $ServerRepo).
         Replace("__REMOTE_LOG__", $remoteLog).
         Replace("__BIND_ADDR__", $ServerBindAddress).
+        Replace("__PROTOCOL__", $Protocol).
+        Replace("__TLS_VERSION__", $TLSVersion).
+        Replace("__ALPN__", $HTTP1ALPN).
+        Replace("__CIPHER_SUITES__", $CipherSuites).
         Replace("__PAYLOAD__", $Payload.ToString()).
         Replace("__SERVER_CPUS__", $ServerCPUSet).
         Replace("__SERVER_GOMAXPROCS__", $ServerGoMaxProcs.ToString()).
@@ -206,7 +225,7 @@ nohup env SERVER_ADDR='__BIND_ADDR__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SE
         Replace("__FRAMEWORK__", $Framework)
     Invoke-SSH -HostName $ServerHost -Command $command -IgnoreStandardError | Out-Null
 
-    $readyPrefix = "serverReady=true framework=$Framework protocol=http1 addr="
+    $readyPrefix = "serverReady=true framework=$Framework protocol=$Protocol addr="
     for ($attempt = 0; $attempt -lt 60; $attempt++) {
         Start-Sleep -Milliseconds 250
         $log = Invoke-SSH -HostName $ServerHost -Command "cat '$remoteLog' 2>/dev/null || true" -IgnoreStandardError
@@ -224,13 +243,14 @@ nohup env SERVER_ADDR='__BIND_ADDR__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SE
 }
 
 function Get-ProfilePaths {
-    param([string]$Framework, [int]$Payload, [int]$Run)
+    param([string]$Framework, [string]$Protocol, [string]$TLSVersion, [int]$Payload, [int]$Run)
     $paths = @{}
     if ($Framework -ne "gnalloy") {
         return $paths
     }
     $mode = if ($TargetRate -gt 0) { "offered-$TargetRate" } else { "saturation" }
-    $baseName = "http1-gnalloy-$mode-p$Payload-r$Run-codec"
+    $tlsLabel = if ([string]::IsNullOrWhiteSpace($TLSVersion)) { "plain" } else { "tls$($TLSVersion.Replace('.', ''))" }
+    $baseName = "$Protocol-gnalloy-$mode-$tlsLabel-p$Payload-r$Run-codec"
     if ($CaptureCPUProfile) {
         $paths.CPUProfile = "$remoteProfileDirectory/$baseName.cpu.pprof"
     }
@@ -257,36 +277,42 @@ function Receive-Profiles {
 }
 
 function Invoke-Client {
-    param([string]$Framework, [int]$Payload)
+    param([string]$Framework, [string]$Protocol, [string]$TLSVersion, [string]$CipherSuites, [int]$Payload)
     $command = "taskset -c '$ClientCPUSet' env GOMAXPROCS='$ClientGoMaxProcs' '$ClientHTTP1Load' -server-framework '$Framework' -addr '$TargetAddress' -payload '$Payload' -connections '$Connections' -messages '$Messages' -warmup-messages '$WarmupMessages' -latency-sample-rate '$LatencySampleRate' -target-rate '$TargetRate' -timeout 5m"
+    if ($Protocol -eq "https1") {
+        $command += " -tls -tls-version '$TLSVersion' -alpn '$HTTP1ALPN' -insecure-skip-verify"
+        if (-not [string]::IsNullOrWhiteSpace($CipherSuites)) {
+            $command += " -cipher-suites '$CipherSuites'"
+        }
+    }
     $result = Invoke-SSH -HostName $ClientHost -Command $command -IgnoreStandardError
     Write-Output $result
     Add-Content -LiteralPath $Output -Value $result -Encoding utf8
 }
 
 function Invoke-Case {
-    param([string]$Framework, [int]$Payload, [int]$Run)
+    param([string]$Framework, [string]$Protocol, [string]$TLSVersion, [string]$CipherSuites, [int]$Payload, [int]$Run)
     if ($Framework -eq "gnet" -or $Framework -eq "netpoll") {
         $reason = if ($Framework -eq "gnet") {
             "gnet does not provide an HTTP codec; benchmark-owned parsing is prohibited"
         } else {
             "CloudWeGo netpoll does not provide an HTTP codec; benchmark-owned parsing is prohibited"
         }
-        $case = "case=$Framework payload=$Payload run=$Run status=N/A reason=$reason"
+        $case = "case=$Framework protocol=$Protocol tlsVersion=$TLSVersion payload=$Payload run=$Run status=N/A reason=$reason"
         Write-Output $case
         Add-Content -LiteralPath $Output -Value $case -Encoding utf8
         return
     }
-    $case = "case=$Framework payload=$Payload run=$Run"
+    $case = "case=$Framework protocol=$Protocol tlsVersion=$TLSVersion cipherSuites=$CipherSuites payload=$Payload run=$Run"
     Write-Output $case
     Add-Content -LiteralPath $Output -Value $case -Encoding utf8
-    $profiles = Get-ProfilePaths -Framework $Framework -Payload $Payload -Run $Run
+    $profiles = Get-ProfilePaths -Framework $Framework -Protocol $Protocol -TLSVersion $TLSVersion -Payload $Payload -Run $Run
     foreach ($remotePath in $profiles.Values) {
         Invoke-SSH -HostName $ServerHost -Command "rm -f -- '$remotePath'" -IgnoreStandardError | Out-Null
     }
-    Start-RemoteServer -Framework $Framework -Payload $Payload -CPUProfile $profiles["CPUProfile"] -RuntimeTrace $profiles["RuntimeTrace"]
+    Start-RemoteServer -Framework $Framework -Protocol $Protocol -TLSVersion $TLSVersion -CipherSuites $CipherSuites -Payload $Payload -CPUProfile $profiles["CPUProfile"] -RuntimeTrace $profiles["RuntimeTrace"]
     try {
-        Invoke-Client -Framework $Framework -Payload $Payload
+        Invoke-Client -Framework $Framework -Protocol $Protocol -TLSVersion $TLSVersion -CipherSuites $CipherSuites -Payload $Payload
     } finally {
         try {
             Stop-RemoteServer
@@ -299,6 +325,35 @@ function Invoke-Case {
     }
 }
 
+function Get-CipherSuites {
+    param([string]$Protocol, [string]$TLSVersion)
+    if ($Protocol -ne "https1") {
+        return ""
+    }
+    switch ($TLSVersion) {
+        "1.1" { return $TLS11Cipher }
+        "1.2" { return $TLS12Cipher }
+        "1.3" { return "" }
+        default { throw "unsupported TLS version: $TLSVersion" }
+    }
+}
+
+function Get-ProtocolCases {
+    foreach ($protocol in $Protocols) {
+        if ($protocol -eq "http1") {
+            [pscustomobject]@{ Protocol = $protocol; TLSVersion = ""; CipherSuites = "" }
+            continue
+        }
+        foreach ($tlsVersion in $TLSVersions) {
+            [pscustomobject]@{
+                Protocol     = $protocol
+                TLSVersion   = $tlsVersion
+                CipherSuites = Get-CipherSuites -Protocol $protocol -TLSVersion $tlsVersion
+            }
+        }
+    }
+}
+
 function Get-RotatedFrameworks {
     param([int]$Run)
     $base = @("gnalloy", "gnet", "netpoll", "fasthttp", "netty")
@@ -308,7 +363,7 @@ function Get-RotatedFrameworks {
     }
 }
 
-foreach ($value in @($ClientHost, $ClientAddress, $ServerHost, $SSHUser, $ServerRepo, $ClientRepo, $ServerScript, $ServerBindAddress, $TargetAddress, $ClientCPUSet, $ServerCPUSet, $GnalloyBossCPUSet, $GnalloyWorkerCPUSet, $ClientHTTP1Load, $remoteProfileDirectory)) {
+foreach ($value in @($ClientHost, $ClientAddress, $ServerHost, $SSHUser, $ServerRepo, $ClientRepo, $ServerScript, $ServerBindAddress, $TargetAddress, $HTTP1ALPN, $TLS11Cipher, $TLS12Cipher, $ClientCPUSet, $ServerCPUSet, $GnalloyBossCPUSet, $GnalloyWorkerCPUSet, $ClientHTTP1Load, $remoteProfileDirectory)) {
     Assert-SafeRemoteValue -Name "parameter" -Value $value
 }
 foreach ($payload in $Payloads) {
@@ -335,7 +390,7 @@ try {
     Set-Content -LiteralPath $Output -Value @(
         "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
         "crossHost=true clientHost=$ClientHost clientAddress=$ClientAddress serverHost=$ServerHost serverAddress=$TargetAddress",
-        "connections=$Connections messages=$Messages warmupMessages=$WarmupMessages targetRate=$TargetRate latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds frameworks=$($Frameworks -join ',')",
+        "protocols=$($Protocols -join ',') tlsVersions=$($TLSVersions -join ',') alpn=$HTTP1ALPN tls11Cipher=$TLS11Cipher tls12Cipher=$TLS12Cipher connections=$Connections messages=$Messages warmupMessages=$WarmupMessages targetRate=$TargetRate latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds frameworks=$($Frameworks -join ',')",
         "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyHTTP1Pipeline=tcp+channel+codec-http1+handler performanceGovernor=$SetPerformanceGovernor",
         "unsupportedFrameworks=gnet,netpoll status=N/A reason=no-framework-http-codec"
     ) -Encoding utf8
@@ -360,11 +415,13 @@ sha256sum '__HTTP1_LOAD__'
     $pingBaseline = Invoke-SSH -HostName $ClientHost -Command "ping -c 10 '$ServerHost'" -IgnoreStandardError
     Add-Content -LiteralPath $Output -Value @("pingBaseline:", $pingBaseline) -Encoding utf8
 
-    foreach ($payload in $Payloads) {
-        for ($run = 1; $run -le $Repetitions; $run++) {
-            foreach ($framework in (Get-RotatedFrameworks -Run $run)) {
-                if ($Frameworks -contains $framework) {
-                    Invoke-Case -Framework $framework -Payload $payload -Run $run
+    foreach ($protocolCase in (Get-ProtocolCases)) {
+        foreach ($payload in $Payloads) {
+            for ($run = 1; $run -le $Repetitions; $run++) {
+                foreach ($framework in (Get-RotatedFrameworks -Run $run)) {
+                    if ($Frameworks -contains $framework) {
+                        Invoke-Case -Framework $framework -Protocol $protocolCase.Protocol -TLSVersion $protocolCase.TLSVersion -CipherSuites $protocolCase.CipherSuites -Payload $payload -Run $run
+                    }
                 }
             }
         }

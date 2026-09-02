@@ -16,8 +16,5 @@ func writeBenchmarkResult(w io.Writer, cfg config, result benchResult) {
 }
 
 func benchmarkName(protocol string) string {
-	if protocol == "http1" {
-		return "BenchmarkNetpollHTTP1"
-	}
 	return "BenchmarkNetpollTCPEcho"
 }

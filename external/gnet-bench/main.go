@@ -96,7 +96,7 @@ func parseConfig(args []string) (config, error) {
 
 func (c config) validate() error {
 	switch strings.TrimSpace(c.Protocol) {
-	case "tcp-echo", "udp-echo", "http1":
+	case "tcp-echo", "udp-echo":
 	default:
 		return fmt.Errorf("%w: %s", errUnsupportedProtocol, c.Protocol)
 	}
@@ -118,8 +118,8 @@ func (c config) validate() error {
 	if c.WarmupMessages < 0 {
 		return fmt.Errorf("%w: warmup-messages must not be negative", errInvalidConfig)
 	}
-	if c.ServerOnly && c.Protocol != "udp-echo" && c.Protocol != "http1" {
-		return fmt.Errorf("%w: server-only requires udp-echo or http1 protocol", errInvalidConfig)
+	if c.ServerOnly && c.Protocol != "udp-echo" {
+		return fmt.Errorf("%w: server-only requires udp-echo protocol", errInvalidConfig)
 	}
 	return nil
 }

@@ -44,9 +44,11 @@ func TestParseConfig(t *testing.T) {
 }
 
 func TestParseConfigRejectsUnsupportedProtocol(t *testing.T) {
-	_, err := parseConfig([]string{"-protocol", "udp-echo"})
-	if !errors.Is(err, errUnsupportedProtocol) {
-		t.Fatalf("err=%v, want %v", err, errUnsupportedProtocol)
+	for _, protocol := range []string{"udp-echo", "http1"} {
+		_, err := parseConfig([]string{"-protocol", protocol})
+		if !errors.Is(err, errUnsupportedProtocol) {
+			t.Fatalf("protocol=%s err=%v, want %v", protocol, err, errUnsupportedProtocol)
+		}
 	}
 }
 
@@ -59,23 +61,6 @@ func TestParseConfigRejectsNegativeLatencySampleRate(t *testing.T) {
 
 func TestParseConfigRejectsNegativeWarmupMessages(t *testing.T) {
 	_, err := parseConfig([]string{"-warmup-messages", "-1"})
-	if !errors.Is(err, errInvalidConfig) {
-		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
-	}
-}
-
-func TestParseConfigSupportsHTTP1ServerOnly(t *testing.T) {
-	cfg, err := parseConfig([]string{"-protocol", "http1", "-server-only=true"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !cfg.ServerOnly {
-		t.Fatal("server-only=false, want true")
-	}
-}
-
-func TestParseConfigRejectsServerOnlyForTCPEcho(t *testing.T) {
-	_, err := parseConfig([]string{"-protocol", "tcp-echo", "-server-only=true"})
 	if !errors.Is(err, errInvalidConfig) {
 		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
 	}
@@ -113,32 +98,6 @@ func TestRunBenchmarkTCPEcho(t *testing.T) {
 	}
 	cfg := config{
 		Protocol:          "tcp-echo",
-		Addr:              "127.0.0.1:0",
-		Payload:           16,
-		Connections:       1,
-		Messages:          2,
-		Timeout:           5 * time.Second,
-		LatencySampleRate: 1,
-		WarmupMessages:    1,
-	}
-	result, err := runBenchmark(context.Background(), cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result.TotalRequests != 2 || result.Errors != 0 || result.NsPerOp <= 0 {
-		t.Fatalf("result=%+v", result)
-	}
-	if result.Latency.Samples != 2 || result.Latency.P50 <= 0 || result.Resources.Goroutines <= 0 {
-		t.Fatalf("result=%+v", result)
-	}
-}
-
-func TestRunBenchmarkHTTP1(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("CloudWeGo netpoll v0.7.5 在 Windows 上游为空实现")
-	}
-	cfg := config{
-		Protocol:          "http1",
 		Addr:              "127.0.0.1:0",
 		Payload:           16,
 		Connections:       1,

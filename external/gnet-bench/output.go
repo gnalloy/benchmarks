@@ -16,9 +16,6 @@ func writeBenchmarkResult(w io.Writer, cfg config, result benchResult) {
 }
 
 func benchmarkName(protocol string) string {
-	if protocol == "http1" {
-		return "BenchmarkGnetHTTP1"
-	}
 	if protocol == "udp-echo" {
 		return "BenchmarkGnetUDPEcho"
 	}

@@ -12,12 +12,6 @@ github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6Kllzaw
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 gnalloy.org/benchmarks v0.0.0-20260902150516-f2dad47149e4 h1:t3EuT1JJtnfpkK8iAP8IA+Qvqja/MeAHbXwCpc1JtkE=
 gnalloy.org/benchmarks v0.0.0-20260902150516-f2dad47149e4/go.mod h1:Qq8Xp583ziQnvMqSuiYOnZgKpXyX4UWBdlqOZnR5sdI=
-gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98 h1:Hilym9O+lbWeRljPkltt4qPTVuvpHJ8AnPEnJbxDItw=
-gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98/go.mod h1:Y5Bk5clhC0i3lilHSjH1bxmc0Ls7fRqSvYf5mV0PXUw=
-gnalloy.org/codec-http1 v0.0.0-20260831155325-667cf0239537 h1:VA1UHimrHonzOOpE4gIwDG0pQSGGKOwHwgzx1JXoVEc=
-gnalloy.org/codec-http1 v0.0.0-20260831155325-667cf0239537/go.mod h1:3P7UGfCb5nkrdaL7KTdRN5yf4LCZBxBXUjntNmD2Ww4=
-gnalloy.org/gnalloy v0.0.0-20260831153720-533bb39b2ad6 h1:YtIsp2u+paX8W0rCuIP71AUtjIC82OAXa0FVF8loNbk=
-gnalloy.org/gnalloy v0.0.0-20260831153720-533bb39b2ad6/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
 go.uber.org/multierr v1.11.0 h1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=

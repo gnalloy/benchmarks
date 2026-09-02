@@ -4,10 +4,7 @@ package main
 
 import (
 	"context"
-	"sync"
 	"time"
-
-	"gnalloy.org/benchmarks/internal/httpbench"
 
 	"github.com/cloudwego/netpoll"
 )
@@ -28,12 +25,7 @@ func startEchoServer(ctx context.Context, cfg config) (*echoServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	response := netpollHTTPResponse(cfg)
-	states := sync.Map{}
 	loop, err := netpoll.NewEventLoop(func(_ context.Context, conn netpoll.Connection) error {
-		if response != nil {
-			return handleHTTP1(conn, response, &states)
-		}
 		reader := conn.Reader()
 		for {
 			n := reader.Len()
@@ -73,50 +65,6 @@ func startEchoServer(ctx context.Context, cfg config) (*echoServer, error) {
 		_ = listener.Close()
 		return nil, ctx.Err()
 	}
-}
-
-type netpollHTTPState struct {
-	once   sync.Once
-	parser httpbench.ServerState
-}
-
-func handleHTTP1(conn netpoll.Connection, response []byte, states *sync.Map) error {
-	value, _ := states.LoadOrStore(conn, &netpollHTTPState{})
-	state := value.(*netpollHTTPState)
-	state.once.Do(func() {
-		_ = conn.AddCloseCallback(func(connection netpoll.Connection) error {
-			states.Delete(connection)
-			return nil
-		})
-	})
-	reader := conn.Reader()
-	for {
-		n := reader.Len()
-		if n == 0 {
-			return nil
-		}
-		payload, err := reader.Next(n)
-		if err != nil {
-			return err
-		}
-		count := state.parser.AppendAndCountRequests(payload)
-		releaseErr := reader.Release()
-		if releaseErr != nil {
-			return releaseErr
-		}
-		for i := 0; i < count; i++ {
-			if _, err := conn.Write(response); err != nil {
-				return err
-			}
-		}
-	}
-}
-
-func netpollHTTPResponse(cfg config) []byte {
-	if cfg.Protocol != "http1" {
-		return nil
-	}
-	return httpbench.ResponseBytes(cfg.Payload)
 }
 
 func (s *echoServer) stop() {

@@ -62,13 +62,10 @@ func TestParseConfigSupportsUDPServerOnly(t *testing.T) {
 	}
 }
 
-func TestParseConfigSupportsHTTP1ServerOnly(t *testing.T) {
-	cfg, err := parseConfig([]string{"-protocol", "http1", "-server-only=true"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !cfg.ServerOnly {
-		t.Fatal("server-only=false, want true")
+func TestParseConfigRejectsHTTP1(t *testing.T) {
+	_, err := parseConfig([]string{"-protocol", "http1"})
+	if !errors.Is(err, errUnsupportedProtocol) {
+		t.Fatalf("err=%v, want %v", err, errUnsupportedProtocol)
 	}
 }
 
@@ -146,30 +143,6 @@ func TestRunBenchmarkTCPEcho(t *testing.T) {
 func TestRunBenchmarkUDPEcho(t *testing.T) {
 	cfg := config{
 		Protocol:          "udp-echo",
-		Addr:              "127.0.0.1:0",
-		Payload:           16,
-		Connections:       1,
-		Messages:          2,
-		Timeout:           5 * time.Second,
-		EventLoops:        1,
-		LatencySampleRate: 1,
-		WarmupMessages:    1,
-	}
-	result, err := runBenchmark(context.Background(), cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result.TotalRequests != 2 || result.Errors != 0 || result.NsPerOp <= 0 {
-		t.Fatalf("result=%+v", result)
-	}
-	if result.Latency.Samples != 2 || result.Latency.P50 <= 0 || result.Resources.Goroutines <= 0 {
-		t.Fatalf("result=%+v", result)
-	}
-}
-
-func TestRunBenchmarkHTTP1(t *testing.T) {
-	cfg := config{
-		Protocol:          "http1",
 		Addr:              "127.0.0.1:0",
 		Payload:           16,
 		Connections:       1,

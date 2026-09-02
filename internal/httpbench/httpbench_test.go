@@ -32,17 +32,6 @@ func TestConfigValidate(t *testing.T) {
 	}
 }
 
-func TestServerStateCountsSplitRequests(t *testing.T) {
-	var state ServerState
-	request := RequestBytes("localhost")
-	if got := state.AppendAndCountRequests(request[:5]); got != 0 {
-		t.Fatalf("requests=%d, want 0", got)
-	}
-	if got := state.AppendAndCountRequests(append(request[5:], request...)); got != 2 {
-		t.Fatalf("requests=%d, want 2", got)
-	}
-}
-
 func TestRunSaturatedAndPaced(t *testing.T) {
 	for _, targetRate := range []int64{0, 1000} {
 		t.Run(rateName(targetRate), func(t *testing.T) {

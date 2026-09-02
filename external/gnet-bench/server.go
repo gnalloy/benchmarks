@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"gnalloy.org/benchmarks/internal/httpbench"
-
 	"github.com/panjf2000/gnet/v2"
 )
 
@@ -22,10 +20,7 @@ func startEchoServer(ctx context.Context, cfg config) (*echoServer, error) {
 		return nil, err
 	}
 	ready := make(chan gnet.Engine, 1)
-	handler := &gnetEchoHandler{
-		ready:    ready,
-		response: gnetHTTPResponse(cfg),
-	}
+	handler := &gnetEchoHandler{ready: ready}
 	errCh := make(chan error, 1)
 	opts := []gnet.Option{
 		gnet.WithReuseAddr(true),
@@ -73,8 +68,7 @@ func (s *echoServer) stop() {
 
 type gnetEchoHandler struct {
 	gnet.BuiltinEventEngine
-	ready    chan<- gnet.Engine
-	response []byte
+	ready chan<- gnet.Engine
 }
 
 type noopLogger struct{}
@@ -93,13 +87,6 @@ func (h *gnetEchoHandler) OnBoot(eng gnet.Engine) gnet.Action {
 	return gnet.None
 }
 
-func (h *gnetEchoHandler) OnOpen(c gnet.Conn) ([]byte, gnet.Action) {
-	if h.response != nil {
-		c.SetContext(&httpbench.ServerState{})
-	}
-	return nil, gnet.None
-}
-
 func (h *gnetEchoHandler) OnTraffic(c gnet.Conn) gnet.Action {
 	buf, err := c.Next(-1)
 	if err != nil {
@@ -107,9 +94,6 @@ func (h *gnetEchoHandler) OnTraffic(c gnet.Conn) gnet.Action {
 	}
 	if len(buf) == 0 {
 		return gnet.None
-	}
-	if h.response != nil {
-		return h.onHTTP1Traffic(c, buf)
 	}
 	n, err := c.Write(buf)
 	if err != nil || n != len(buf) {
@@ -119,30 +103,4 @@ func (h *gnetEchoHandler) OnTraffic(c gnet.Conn) gnet.Action {
 		return gnet.Close
 	}
 	return gnet.None
-}
-
-func (h *gnetEchoHandler) onHTTP1Traffic(c gnet.Conn, buf []byte) gnet.Action {
-	state, ok := c.Context().(*httpbench.ServerState)
-	if !ok || state == nil {
-		return gnet.Close
-	}
-	count := state.AppendAndCountRequests(buf)
-	for i := 0; i < count; i++ {
-		if n, err := c.Write(h.response); err != nil || n != len(h.response) {
-			return gnet.Close
-		}
-	}
-	if count > 0 {
-		if err := c.Flush(); err != nil {
-			return gnet.Close
-		}
-	}
-	return gnet.None
-}
-
-func gnetHTTPResponse(cfg config) []byte {
-	if cfg.Protocol != "http1" {
-		return nil
-	}
-	return httpbench.ResponseBytes(cfg.Payload)
 }

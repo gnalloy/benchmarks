@@ -3,6 +3,7 @@ package dev.goark.gnalloy.benchmarks.netty;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 import javax.net.ssl.SNIHostName;
@@ -20,7 +21,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 final class SslSupport {
-    private static final String SERVER_NAME = "gnalloy.local";
+    static final String SERVER_NAME = "gnalloy.local";
     private static final X509TrustManager TRUST_ALL = new X509TrustManager() {
         @Override
         public void checkClientTrusted(X509Certificate[] chain, String authType) {
@@ -47,6 +48,29 @@ final class SslSupport {
         SelfSignedCertificate certificate = new SelfSignedCertificate(SERVER_NAME);
         SslContextBuilder builder = SslContextBuilder
                 .forServer(certificate.certificate(), certificate.privateKey())
+                .protocols(config.tlsVersion().protocolName());
+        List<String> protocols = config.alpnProtocols();
+        if (!protocols.isEmpty()) {
+            builder.applicationProtocolConfig(new ApplicationProtocolConfig(
+                    ApplicationProtocolConfig.Protocol.ALPN,
+                    ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+                    ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+                    protocols));
+        }
+        List<String> cipherSuites = config.cipherSuiteList();
+        if (!cipherSuites.isEmpty()) {
+            builder.ciphers(cipherSuites);
+        }
+        return builder.build();
+    }
+
+    static SslContext clientContext(Config config) throws Exception {
+        if (!config.tlsEnabled()) {
+            return null;
+        }
+        enableLegacyTLSIfRequested(config.tlsVersion());
+        SslContextBuilder builder = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .protocols(config.tlsVersion().protocolName());
         List<String> protocols = config.alpnProtocols();
         if (!protocols.isEmpty()) {

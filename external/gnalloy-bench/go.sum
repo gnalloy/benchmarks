@@ -32,6 +32,8 @@ gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3 h1:OgvNwgeDUBH/8/ie
 gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3/go.mod h1:nR7rAmU0ZsUb5g04Khl97HYtNdlRmYOGZ2d3pX/aTN0=
 gnalloy.org/transport-udp v0.0.0-20260902060239-f376725bd024 h1:gD8qmAUVJyKC0ckiO9ZWloNPdeoDSHOa4dkZo/gBTO4=
 gnalloy.org/transport-udp v0.0.0-20260902060239-f376725bd024/go.mod h1:Oz42iFPvKh4DdFDdJSwCfO0uPM5qWUPdJnEz42UKmMg=
+gnalloy.org/transport-udp v0.0.0-20260902073114-f751a0120d44 h1:r9G2kRnjYjBo5rLoGtX76yYAEJmFuU+i1Ui3lxYhMmY=
+gnalloy.org/transport-udp v0.0.0-20260902073114-f751a0120d44/go.mod h1:Oz42iFPvKh4DdFDdJSwCfO0uPM5qWUPdJnEz42UKmMg=
 gnalloy.org/transport-zerocopy v0.0.0-20260831155854-78135ae02cc4 h1:WIEc0eq25LyEW2UTIO3m/48wpKE+jqA8iXVzNlsUY/8=
 gnalloy.org/transport-zerocopy v0.0.0-20260831155854-78135ae02cc4/go.mod h1:BFVVe08bATHMx9ZzcKjEYJQw5D2KDLAFrY082SJu3MM=
 go.uber.org/mock v0.5.2 h1:LbtPTcP8A5k9WPXj54PPPbjcI4Y6lhyOZXn+VS7wNko=

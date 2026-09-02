@@ -16,13 +16,14 @@ func TestParseConfigAcceptsHTTPS1TLS12Cipher(t *testing.T) {
 		"-connections", "2",
 		"-messages", "3",
 		"-timeout", "1s",
+		"-cpuprofile", "cpu.pprof",
 		"-tls-version", "1.2",
 		"-cipher-suites", "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Protocol != protocolHTTPS1 || cfg.TLSVersion != tlsVersion12 || cfg.CipherSuiteIDs[0] != tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 {
+	if cfg.Protocol != protocolHTTPS1 || cfg.TLSVersion != tlsVersion12 || cfg.CPUProfile != "cpu.pprof" || cfg.CipherSuiteIDs[0] != tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 {
 		t.Fatalf("cfg=%+v", cfg)
 	}
 }

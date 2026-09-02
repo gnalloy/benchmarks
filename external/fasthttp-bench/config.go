@@ -23,6 +23,7 @@ type config struct {
 	Timeout           time.Duration
 	LatencySampleRate int
 	WarmupMessages    int
+	CPUProfile        string
 	TLSVersion        string
 	ALPN              string
 	CipherSuites      string
@@ -51,6 +52,7 @@ func parseConfig(args []string) (config, error) {
 	fs.DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "overall timeout")
 	fs.IntVar(&cfg.LatencySampleRate, "latency-sample-rate", cfg.LatencySampleRate, "latency sampling interval")
 	fs.IntVar(&cfg.WarmupMessages, "warmup-messages", cfg.WarmupMessages, "messages per connection sent before timed measurement")
+	fs.StringVar(&cfg.CPUProfile, "cpuprofile", cfg.CPUProfile, "write Go CPU profile to this file")
 	fs.StringVar(&cfg.TLSVersion, "tls-version", cfg.TLSVersion, "TLS protocol version: 1.1, 1.2 or 1.3")
 	fs.StringVar(&cfg.ALPN, "alpn", cfg.ALPN, "comma-separated TLS ALPN protocols")
 	fs.StringVar(&cfg.CipherSuites, "cipher-suites", cfg.CipherSuites, "comma-separated TLS cipher suites")

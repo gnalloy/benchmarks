@@ -21,6 +21,11 @@ func runCLI(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	stopProfile, err := startCPUProfile(cfg.CPUProfile)
+	if err != nil {
+		return err
+	}
+	defer stopProfile()
 	if cfg.ServerOnly {
 		return runServerOnly(context.Background(), cfg, stdout)
 	}

@@ -206,7 +206,7 @@ function Start-RemoteServer {
     $command = @'
 cd '__REMOTE_REPO__'
 : >'__REMOTE_LOG__'
-nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' ALPN='__ALPN__' CIPHER_SUITES='__CIPHER_SUITES__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_FLUSH_STRATEGY='__FLUSH_STRATEGY__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_ALLOC_PROFILE='__ALLOC_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
+nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' ALPN='__ALPN__' CIPHER_SUITES='__CIPHER_SUITES__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_FLUSH_STRATEGY='__FLUSH_STRATEGY__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_ALLOC_PROFILE='__ALLOC_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' FASTHTTP_CPU_PROFILE='__CPU_PROFILE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
 '@
     $command = $command.Replace("__REMOTE_REPO__", $ServerRepo).
         Replace("__REMOTE_LOG__", $remoteLog).
@@ -251,14 +251,17 @@ nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS
 function Get-ProfilePaths {
     param([string]$Framework, [string]$Protocol, [string]$TLSVersion, [int]$Payload, [int]$Run)
     $paths = @{}
-    if ($Framework -ne "gnalloy") {
+    if ($Framework -ne "gnalloy" -and $Framework -ne "fasthttp") {
         return $paths
     }
     $mode = if ($TargetRate -gt 0) { "offered-$TargetRate" } else { "saturation" }
     $tlsLabel = if ([string]::IsNullOrWhiteSpace($TLSVersion)) { "plain" } else { "tls$($TLSVersion.Replace('.', ''))" }
-    $baseName = "$Protocol-gnalloy-$mode-$tlsLabel-p$Payload-r$Run-codec"
+    $baseName = "$Protocol-$Framework-$mode-$tlsLabel-p$Payload-r$Run-codec"
     if ($CaptureCPUProfile) {
         $paths.CPUProfile = "$remoteProfileDirectory/$baseName.cpu.pprof"
+    }
+    if ($Framework -eq "fasthttp") {
+        return $paths
     }
     if ($CaptureAllocProfile) {
         $paths.AllocProfile = "$remoteProfileDirectory/$baseName.alloc.pprof"

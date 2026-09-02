@@ -21,6 +21,7 @@ GNALLOY_WORKER_CPU_SET="${GNALLOY_WORKER_CPU_SET:-0,1,2,3}"
 GNALLOY_CPU_PROFILE="${GNALLOY_CPU_PROFILE:-}"
 GNALLOY_ALLOC_PROFILE="${GNALLOY_ALLOC_PROFILE:-}"
 GNALLOY_RUNTIME_TRACE="${GNALLOY_RUNTIME_TRACE:-}"
+FASTHTTP_CPU_PROFILE="${FASTHTTP_CPU_PROFILE:-}"
 NICE_LEVEL="${NICE_LEVEL:-0}"
 SERVER_PID_FILE="${SERVER_PID_FILE:-/tmp/gnalloy-http1-cross-host.pid}"
 GNALLOY_BENCH="${GNALLOY_BENCH:-${REPO_ROOT}/external/bin/gnalloy-bench}"
@@ -128,8 +129,13 @@ case "${FRAMEWORK}" in
       -timeout 5m "${tls_args[@]}" "${profile_args[@]}"
     ;;
   fasthttp)
+    profile_args=()
+    if [[ -n "${FASTHTTP_CPU_PROFILE}" ]]; then
+      mkdir -p "$(dirname "${FASTHTTP_CPU_PROFILE}")"
+      profile_args+=( -cpuprofile "${FASTHTTP_CPU_PROFILE}" )
+    fi
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${FASTHTTP_BENCH}" \
-      -protocol "${PROTOCOL}" -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -timeout 5m "${tls_args[@]}"
+      -protocol "${PROTOCOL}" -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -timeout 5m "${tls_args[@]}" "${profile_args[@]}"
     ;;
   netty)
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" "${JAVA_BIN}" -jar "${NETTY_BENCH_JAR}" \

@@ -54,6 +54,15 @@ TARGET_RATE=60000 ./scripts/run-linux-udp-common-client.sh
 
 默认模式测量饱和吞吐。`TARGET_RATE` 为等负载延迟测试设置共享的聚合请求速率。固定速率模式下，`latency` 从每个请求的计划发送时刻开始统计，`scheduleDelay` 表示客户端实际开始发送的滞后时间，`roundTripLatency` 表示从实际发送尝试到收到回显的耗时。这组分解既保留调度积压，又能将它与网络和服务端处理耗时区分。脚本将服务端和客户端固定到互不重叠的物理核，通过 Linux sysfs 校验 package/core ID，轮换框架顺序，严格串行执行案例，并记录 CPU 拓扑、governor、参数和二进制哈希。仅当主机无法提供物理核隔离集合时才设置 `REQUIRE_PHYSICAL_CPU_ISOLATION=0`，并且不得把该结果与隔离测试直接比较。Netpoll 与 fasthttp 的 benchmark harness 没有可比的 UDP 服务端，因此保持排除。
 
+如需通过内网固定主机角色验证 UDP，在 Debian `172.16.8.172` 上运行统一客户端，并在 Debian `172.16.8.171` 上严格串行启动各服务端。客户端 checkout 默认使用 `/opt/test/gnalloy/benchmarks-cross-host`，服务端 checkout 默认使用 `/opt/test/gnalloy/benchmarks-e481c9a`。在客户端构建 `external/bin/udp-load`，在服务端构建全部服务端二进制，然后从控制工作站执行：
+
+```powershell
+.\scripts\run-cross-host-udp-common-client.ps1
+.\scripts\run-cross-host-udp-common-client.ps1 -TargetRate 60000
+```
+
+客户端默认绑定 `0,1,2,4`，避开 CPU 11 上的网卡 IRQ，并使用四个不同物理核。跨机结果包含两端网卡、交换链路和两端操作系统网络栈的成本，必须与同机物理核隔离结果分开报告。
+
 ## API 选择
 
 通过 API 清单选择当前协议路径需要的具体构造函数或 option 类型：

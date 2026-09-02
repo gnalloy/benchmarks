@@ -93,11 +93,10 @@ func (h http1Handler) ChannelRead(ctx *channel.HandlerContext, msg any) {
 		return
 	}
 	defer req.Release()
-	resp := http1.Response{
-		StatusCode: 200,
-		Headers:    h.headers,
-		Body:       buffer.NewSharedBuffer(h.body),
-	}
+	resp := http1.AcquireResponse()
+	resp.StatusCode = 200
+	resp.Headers = h.headers
+	resp.Body = buffer.NewSharedBuffer(h.body)
 	if err := ctx.WriteAndFlush(resp); err != nil {
 		ctx.FireExceptionCaught(err)
 	}

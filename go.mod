@@ -3,7 +3,7 @@ module gnalloy.org/benchmarks
 go 1.25.0
 
 require (
-	gnalloy.org/codec-http1 v0.0.0-20260902210723-976908e32b9c
+	gnalloy.org/codec-http1 v0.0.0-20260902222030-91f30ea6af8f
 	gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81
 	gnalloy.org/gnalloy v0.0.0-20260902193450-65ce15f6ff60
 	gnalloy.org/handler-tls v0.0.0-20260902193648-ea5c653ee1e6

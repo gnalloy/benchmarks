@@ -10,8 +10,8 @@ github.com/quic-go/quic-go v0.61.0 h1:ui88A53s8MSVYLC56en0KQ17HARk+9986Dn0SBfKNv
 github.com/quic-go/quic-go v0.61.0/go.mod h1:9So2anK4Tp22URSQq00k+Vo2PNkle96ycDPDHL4s9vs=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-gnalloy.org/benchmarks v0.0.0-20260902150516-f2dad47149e4 h1:t3EuT1JJtnfpkK8iAP8IA+Qvqja/MeAHbXwCpc1JtkE=
-gnalloy.org/benchmarks v0.0.0-20260902150516-f2dad47149e4/go.mod h1:Qq8Xp583ziQnvMqSuiYOnZgKpXyX4UWBdlqOZnR5sdI=
+gnalloy.org/benchmarks v0.0.0-20260902164329-dca0030bcec3 h1:nJXvh6dwrilxIYRk59MmmprNUxh6SKSTdaefp98T55U=
+gnalloy.org/benchmarks v0.0.0-20260902164329-dca0030bcec3/go.mod h1:Lr3z5qR6bYMoWGyAd/hYcVtqUZsK4WJwoFkiRe4oLEk=
 gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98 h1:Hilym9O+lbWeRljPkltt4qPTVuvpHJ8AnPEnJbxDItw=
 gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98/go.mod h1:Y5Bk5clhC0i3lilHSjH1bxmc0Ls7fRqSvYf5mV0PXUw=
 gnalloy.org/codec-http1 v0.0.0-20260831155325-667cf0239537 h1:VA1UHimrHonzOOpE4gIwDG0pQSGGKOwHwgzx1JXoVEc=
@@ -22,8 +22,8 @@ gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81 h1:F898MYKxFmbSkz+TQM
 gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81/go.mod h1:92crEBwS/e4gpNyEIokXDmYi7tg1CJnhM3WI2gwsLsw=
 gnalloy.org/gnalloy v0.0.0-20260902012239-5357513937d5 h1:hwvJEvzoJSFAMUhvKv9B5FpdMB+QQ7/ilhMOxdp6RbI=
 gnalloy.org/gnalloy v0.0.0-20260902012239-5357513937d5/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
-gnalloy.org/handler-tls v0.0.0-20260831160137-72e45bfc3101 h1:BoyOOs2cd53OhPA+Vb0O9X0T8oI52CdSBqZCD6MxMDk=
-gnalloy.org/handler-tls v0.0.0-20260831160137-72e45bfc3101/go.mod h1:KYkjLY+u83XcfJMvPE/bvTQIGAYodzsmcD1/iYDgYj0=
+gnalloy.org/handler-tls v0.0.0-20260901014432-f6a2b3a7ac50 h1:NPbumg2oKkDB8cFN56j0+8DnTizPcNkkKl2eDmsVYcA=
+gnalloy.org/handler-tls v0.0.0-20260901014432-f6a2b3a7ac50/go.mod h1:KYkjLY+u83XcfJMvPE/bvTQIGAYodzsmcD1/iYDgYj0=
 gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f h1:5l35q8Bxsn+Xv022nJqF8GIoj3jU6xDKZplTu44VK2c=
 gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f/go.mod h1:Hp87MhDuVqXEA3UAAsPhaGCX16fTuOFfT40SBjqS8zc=
 gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b h1:Jak/BDZxVrpkUIbDR3HLw2MTgHubaEuR8zZht7wkDOM=

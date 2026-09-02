@@ -52,7 +52,7 @@ Linux 矩阵覆盖 TCP、UDP、QUIC stream、HTTP/1.1、HTTP/2、HTTP/3、HTTPS 
 TARGET_RATE=60000 ./scripts/run-linux-udp-common-client.sh
 ```
 
-默认模式测量饱和吞吐。`TARGET_RATE` 为等负载延迟测试设置共享的聚合请求速率。固定速率模式从每个请求的计划发送时刻开始统计延迟，因此调度延迟和积压不会被遗漏。脚本将服务端和客户端固定到互不重叠的逻辑 CPU 集合，轮换框架顺序，严格串行执行案例，并记录 CPU 拓扑、governor、参数和二进制哈希。Netpoll 与 fasthttp 的 benchmark harness 没有可比的 UDP 服务端，因此保持排除。
+默认模式测量饱和吞吐。`TARGET_RATE` 为等负载延迟测试设置共享的聚合请求速率。固定速率模式从每个请求的计划发送时刻开始统计延迟，因此调度延迟和积压不会被遗漏。脚本将服务端和客户端固定到互不重叠的物理核，通过 Linux sysfs 校验 package/core ID，轮换框架顺序，严格串行执行案例，并记录 CPU 拓扑、governor、参数和二进制哈希。仅当主机无法提供物理核隔离集合时才设置 `REQUIRE_PHYSICAL_CPU_ISOLATION=0`，并且不得把该结果与隔离测试直接比较。Netpoll 与 fasthttp 的 benchmark harness 没有可比的 UDP 服务端，因此保持排除。
 
 ## API 选择
 

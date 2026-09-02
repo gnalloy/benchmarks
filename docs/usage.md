@@ -52,7 +52,7 @@ Build `external/bin/gnalloy-bench`, `external/bin/gnet-bench`, `external/bin/net
 TARGET_RATE=60000 ./scripts/run-linux-udp-common-client.sh
 ```
 
-The default run measures saturation throughput. `TARGET_RATE` sets a shared aggregate request rate for a comparable latency run. Fixed-rate latency starts at each request's scheduled send time, so scheduling delay and backlog remain visible instead of being omitted. The script pins server and client processes to disjoint logical CPU sets, rotates framework order, runs cases serially, and records the CPU topology, governor, parameters, and binary hashes. Netpoll and fasthttp remain excluded because their benchmark harnesses do not provide comparable UDP servers.
+The default run measures saturation throughput. `TARGET_RATE` sets a shared aggregate request rate for a comparable latency run. Fixed-rate latency starts at each request's scheduled send time, so scheduling delay and backlog remain visible instead of being omitted. The script pins server and client processes to disjoint physical cores, verifies package/core IDs through Linux sysfs, rotates framework order, runs cases serially, and records the CPU topology, governor, parameters, and binary hashes. Set `REQUIRE_PHYSICAL_CPU_ISOLATION=0` only when the host cannot provide physically isolated CPU sets, and do not compare that result with an isolated run. Netpoll and fasthttp remain excluded because their benchmark harnesses do not provide comparable UDP servers.
 
 ## API Selection
 

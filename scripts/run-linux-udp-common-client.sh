@@ -19,14 +19,15 @@ LATENCY_SAMPLE_RATE="${LATENCY_SAMPLE_RATE:-64}"
 TARGET_RATE="${TARGET_RATE:-0}"
 REPETITIONS="${REPETITIONS:-5}"
 EVENT_LOOPS="${EVENT_LOOPS:-4}"
-GNALLOY_WORKERS="${GNALLOY_WORKERS:-3}"
-GNALLOY_MAX_MESSAGES_PER_READ="${GNALLOY_MAX_MESSAGES_PER_READ:-1}"
-GNALLOY_BOSS_CPU_SET="${GNALLOY_BOSS_CPU_SET:-3}"
-GNALLOY_WORKER_CPU_SET="${GNALLOY_WORKER_CPU_SET:-0,1,2}"
+GNALLOY_WORKERS="${GNALLOY_WORKERS:-4}"
+GNALLOY_MAX_MESSAGES_PER_READ="${GNALLOY_MAX_MESSAGES_PER_READ:-64}"
+GNALLOY_BOSS_CPU_SET="${GNALLOY_BOSS_CPU_SET:-4}"
+GNALLOY_WORKER_CPU_SET="${GNALLOY_WORKER_CPU_SET:-0,1,4,5}"
 SERVER_GOMAXPROCS="${SERVER_GOMAXPROCS:-4}"
 CLIENT_GOMAXPROCS="${CLIENT_GOMAXPROCS:-4}"
-SERVER_CPU_SET="${SERVER_CPU_SET:-0-3}"
-CLIENT_CPU_SET="${CLIENT_CPU_SET:-4-7}"
+SERVER_CPU_SET="${SERVER_CPU_SET:-0,1,4,5}"
+CLIENT_CPU_SET="${CLIENT_CPU_SET:-2,3,6,7}"
+REQUIRE_PHYSICAL_CPU_ISOLATION="${REQUIRE_PHYSICAL_CPU_ISOLATION:-1}"
 COOLDOWN_SECONDS="${COOLDOWN_SECONDS:-10}"
 NICE_LEVEL="${NICE_LEVEL:-0}"
 SET_PERFORMANCE_GOVERNOR="${SET_PERFORMANCE_GOVERNOR:-1}"
@@ -117,8 +118,37 @@ validate_cpu_sets() {
       fi
     done < <(expand_cpu_set "${tuned_set}")
   done
+  if [[ "${REQUIRE_PHYSICAL_CPU_ISOLATION}" == "1" ]]; then
+    validate_physical_cpu_isolation
+  fi
   taskset -c "${SERVER_CPU_SET}" true
   taskset -c "${CLIENT_CPU_SET}" true
+}
+
+cpu_core_key() {
+  local cpu="$1"
+  local topology="/sys/devices/system/cpu/cpu${cpu}/topology"
+  if [[ ! -r "${topology}/physical_package_id" || ! -r "${topology}/core_id" ]]; then
+    printf 'CPU topology is unavailable for CPU %s\n' "${cpu}" >&2
+    exit 1
+  fi
+  printf '%s:%s\n' "$(<"${topology}/physical_package_id")" "$(<"${topology}/core_id")"
+}
+
+validate_physical_cpu_isolation() {
+  local cpu key
+  declare -A server_cores=()
+  while read -r cpu; do
+    key="$(cpu_core_key "${cpu}")"
+    server_cores["${key}"]=1
+  done < <(expand_cpu_set "${SERVER_CPU_SET}")
+  while read -r cpu; do
+    key="$(cpu_core_key "${cpu}")"
+    if [[ -n "${server_cores[${key}]+present}" ]]; then
+      printf 'server and client CPU sets share physical core %s through CPU %s\n' "${key}" "${cpu}" >&2
+      exit 1
+    fi
+  done < <(expand_cpu_set "${CLIENT_CPU_SET}")
 }
 
 restore_governors() {
@@ -288,6 +318,10 @@ require_positive_integer SERVER_GOMAXPROCS "${SERVER_GOMAXPROCS}"
 require_positive_integer CLIENT_GOMAXPROCS "${CLIENT_GOMAXPROCS}"
 require_non_negative_integer COOLDOWN_SECONDS "${COOLDOWN_SECONDS}"
 require_positive_integer READY_TIMEOUT_SECONDS "${READY_TIMEOUT_SECONDS}"
+if [[ "${REQUIRE_PHYSICAL_CPU_ISOLATION}" != "0" && "${REQUIRE_PHYSICAL_CPU_ISOLATION}" != "1" ]]; then
+  printf 'REQUIRE_PHYSICAL_CPU_ISOLATION must be 0 or 1: %s\n' "${REQUIRE_PHYSICAL_CPU_ISOLATION}" >&2
+  exit 1
+fi
 if [[ ! "${NICE_LEVEL}" =~ ^-?[0-9]+$ ]] || ((NICE_LEVEL < -20 || NICE_LEVEL > 19)); then
   printf 'NICE_LEVEL must be between -20 and 19: %s\n' "${NICE_LEVEL}" >&2
   exit 1
@@ -307,8 +341,8 @@ SERVER_LOG="$(mktemp "${TMPDIR:-/tmp}/gnalloy-udp-server.XXXXXX")"
   printf 'kernel=%s\n' "$(uname -srmo)"
   printf 'cpuModel=%s\n' "$(awk -F ': ' '/^model name/{print $2; exit}' /proc/cpuinfo)"
   printf 'cpus=%s governor=%s\n' "$(nproc)" "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || printf unknown)"
-  printf 'serverCPUSet=%s clientCPUSet=%s serverGOMAXPROCS=%s clientGOMAXPROCS=%s eventLoops=%s\n' \
-    "${SERVER_CPU_SET}" "${CLIENT_CPU_SET}" "${SERVER_GOMAXPROCS}" "${CLIENT_GOMAXPROCS}" "${EVENT_LOOPS}"
+  printf 'serverCPUSet=%s clientCPUSet=%s physicalCPUIsolation=%s serverGOMAXPROCS=%s clientGOMAXPROCS=%s eventLoops=%s\n' \
+    "${SERVER_CPU_SET}" "${CLIENT_CPU_SET}" "${REQUIRE_PHYSICAL_CPU_ISOLATION}" "${SERVER_GOMAXPROCS}" "${CLIENT_GOMAXPROCS}" "${EVENT_LOOPS}"
   printf 'gnalloyWorkers=%s gnalloyBossCPUSet=%s gnalloyWorkerCPUSet=%s gnalloyMaxMessagesPerRead=%s\n' \
     "${GNALLOY_WORKERS}" "${GNALLOY_BOSS_CPU_SET}" "${GNALLOY_WORKER_CPU_SET}" "${GNALLOY_MAX_MESSAGES_PER_READ}"
   printf 'connections=%s messages=%s warmupMessages=%s targetRate=%s latencySampleRate=%s repetitions=%s cooldownSeconds=%s niceLevel=%s\n' \

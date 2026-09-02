@@ -1,6 +1,6 @@
 {
   "name": "gnalloy windows http1 parity matrix",
-  "notes": "Windows HTTP/1.1 keep-alive 对标矩阵。Gnalloy 固定 IOCP，并经过 Channel/Pipeline、codec/http1 和业务 Handler；Netty 固定 NIO；gnet 使用 Windows poller。CloudWeGo netpoll v0.7.5 的 Windows server 路径返回 unsupported，不纳入本矩阵。",
+  "notes": "Windows HTTP/1.1 keep-alive 对标矩阵。Gnalloy 固定 IOCP，并经过 Channel/Pipeline、codec-http1 和业务 Handler；Netty 固定 NIO；fasthttp 使用正式 HTTP 实现；gnet 和 netpoll 不提供 HTTP codec，明确标记 N/A。",
   "variables": {
     "REPO_ROOT": ".",
     "CONNECTIONS": "128",
@@ -10,7 +10,7 @@
     "GNALLOY_HTTP1_READ_BUFFER_SIZE": "384",
     "GNALLOY_BENCH": "./benchmarks/external/bin/gnalloy-bench",
     "NETTY_BENCH_JAR": "./benchmarks/external/bin/netty-bench.jar",
-    "GNET_BENCH": "./benchmarks/external/bin/gnet-bench"
+    "FASTHTTP_BENCH": "./benchmarks/external/bin/fasthttp-bench"
   },
   "scenarios": [
     {
@@ -64,16 +64,46 @@
       "tags": ["external", "netty", "http1", "payload-1024"]
     },
     {
-      "name": "gnet http1 1KiB",
-      "framework": "gnet",
+      "name": "fasthttp http1 128B",
+      "framework": "fasthttp",
       "protocol": "http1",
-      "backend": "poller",
+      "backend": "net",
+      "payload": "128B",
+      "warmup": 1,
+      "repeat": 3,
+      "command": ["${FASTHTTP_BENCH}", "-protocol", "http1", "-payload", "128", "-connections", "${CONNECTIONS}", "-messages", "${MESSAGES}", "-latency-sample-rate", "${LATENCY_SAMPLE_RATE}", "-warmup-messages", "${WARMUP_MESSAGES}"],
+      "timeout": "5m",
+      "tags": ["external", "fasthttp", "http1", "payload-128"]
+    },
+    {
+      "name": "fasthttp http1 1KiB",
+      "framework": "fasthttp",
+      "protocol": "http1",
+      "backend": "net",
       "payload": "1024B",
       "warmup": 1,
       "repeat": 3,
-      "command": ["${GNET_BENCH}", "-protocol", "http1", "-payload", "1024", "-connections", "${CONNECTIONS}", "-messages", "${MESSAGES}", "-latency-sample-rate", "${LATENCY_SAMPLE_RATE}", "-warmup-messages", "${WARMUP_MESSAGES}"],
+      "command": ["${FASTHTTP_BENCH}", "-protocol", "http1", "-payload", "1024", "-connections", "${CONNECTIONS}", "-messages", "${MESSAGES}", "-latency-sample-rate", "${LATENCY_SAMPLE_RATE}", "-warmup-messages", "${WARMUP_MESSAGES}"],
       "timeout": "5m",
-      "tags": ["external", "gnet", "http1", "payload-1024"]
+      "tags": ["external", "fasthttp", "http1", "payload-1024"]
+    },
+    {
+      "name": "gnet http1 unsupported",
+      "framework": "gnet",
+      "protocol": "http1",
+      "backend": "unsupported",
+      "skip": true,
+      "skipReason": "gnet does not provide an HTTP codec; benchmark-owned parsing is prohibited",
+      "tags": ["external", "gnet", "http1", "unsupported"]
+    },
+    {
+      "name": "netpoll http1 unsupported",
+      "framework": "netpoll",
+      "protocol": "http1",
+      "backend": "unsupported",
+      "skip": true,
+      "skipReason": "CloudWeGo netpoll does not provide an HTTP codec; benchmark-owned parsing is prohibited",
+      "tags": ["external", "netpoll", "http1", "unsupported"]
     }
   ]
 }

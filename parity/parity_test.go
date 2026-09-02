@@ -842,8 +842,8 @@ func TestWindowsHTTP1MatrixExternalHarnessesCanPassStrictGateWithRepoArtifacts(t
 			case "benchmarks/external/bin/netty-bench.jar",
 				"benchmarks/external/bin/gnalloy-bench",
 				"benchmarks/external/bin/gnalloy-bench.exe",
-				"benchmarks/external/bin/gnet-bench",
-				"benchmarks/external/bin/gnet-bench.exe":
+				"benchmarks/external/bin/fasthttp-bench",
+				"benchmarks/external/bin/fasthttp-bench.exe":
 				return fakeFileInfo{name: filepath.Base(name)}, nil
 			default:
 				return nil, os.ErrNotExist
@@ -878,10 +878,8 @@ func TestLinuxHTTP1MatrixExternalHarnessesCanPassStrictGateWithRepoArtifacts(t *
 			case "benchmarks/external/bin/netty-bench.jar",
 				"benchmarks/external/bin/gnalloy-bench",
 				"benchmarks/external/bin/gnalloy-bench.exe",
-				"benchmarks/external/bin/gnet-bench",
-				"benchmarks/external/bin/gnet-bench.exe",
-				"benchmarks/external/bin/netpoll-bench",
-				"benchmarks/external/bin/netpoll-bench.exe":
+				"benchmarks/external/bin/fasthttp-bench",
+				"benchmarks/external/bin/fasthttp-bench.exe":
 				return fakeFileInfo{name: filepath.Base(name)}, nil
 			default:
 				return nil, os.ErrNotExist
@@ -890,6 +888,42 @@ func TestLinuxHTTP1MatrixExternalHarnessesCanPassStrictGateWithRepoArtifacts(t *
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestHTTP1MatricesUseFrameworkHTTPImplementations(t *testing.T) {
+	for _, name := range []string{"windows-http1-matrix.json", "linux-http1-matrix.json"} {
+		t.Run(name, func(t *testing.T) {
+			file, err := os.Open(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer file.Close()
+
+			spec, err := LoadSpec(file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			seen := make(map[string]bool, 5)
+			for _, scenario := range spec.Scenarios {
+				seen[scenario.Framework] = true
+				switch scenario.Framework {
+				case "gnet", "netpoll":
+					if !scenario.Skip || len(scenario.Command) != 0 {
+						t.Fatalf("framework without HTTP codec must be N/A: %+v", scenario)
+					}
+				case "gnalloy", "netty", "fasthttp":
+					if scenario.Skip || len(scenario.Command) == 0 {
+						t.Fatalf("framework HTTP implementation must be executable: %+v", scenario)
+					}
+				}
+			}
+			for _, framework := range []string{"gnalloy", "netty", "fasthttp", "gnet", "netpoll"} {
+				if !seen[framework] {
+					t.Fatalf("framework %s missing", framework)
+				}
+			}
+		})
 	}
 }
 

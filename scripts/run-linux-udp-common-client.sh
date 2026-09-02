@@ -19,6 +19,7 @@ LATENCY_SAMPLE_RATE="${LATENCY_SAMPLE_RATE:-64}"
 REPETITIONS="${REPETITIONS:-5}"
 EVENT_LOOPS="${EVENT_LOOPS:-4}"
 GNALLOY_WORKERS="${GNALLOY_WORKERS:-3}"
+GNALLOY_MAX_MESSAGES_PER_READ="${GNALLOY_MAX_MESSAGES_PER_READ:-1}"
 GNALLOY_BOSS_CPU_SET="${GNALLOY_BOSS_CPU_SET:-3}"
 GNALLOY_WORKER_CPU_SET="${GNALLOY_WORKER_CPU_SET:-0,1,2}"
 SERVER_GOMAXPROCS="${SERVER_GOMAXPROCS:-4}"
@@ -200,8 +201,8 @@ start_server() {
     gnalloy)
       taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${GNALLOY_BENCH}" \
         -protocol udp-echo -server-only=true -addr "${SERVER_ADDR}" -backend epoll -boss 1 \
-        -workers "${GNALLOY_WORKERS}" -boss-cpus "${GNALLOY_BOSS_CPU_SET}" -worker-cpus "${GNALLOY_WORKER_CPU_SET}" \
-        -reuseport=true -max-messages-per-read 1 -timeout 5m >"${SERVER_LOG}" 2>&1 &
+		-workers "${GNALLOY_WORKERS}" -boss-cpus "${GNALLOY_BOSS_CPU_SET}" -worker-cpus "${GNALLOY_WORKER_CPU_SET}" \
+		-reuseport=true -max-messages-per-read "${GNALLOY_MAX_MESSAGES_PER_READ}" -timeout 5m >"${SERVER_LOG}" 2>&1 &
       ;;
     gnet)
       taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${GNET_BENCH}" \
@@ -280,6 +281,7 @@ require_non_negative_integer LATENCY_SAMPLE_RATE "${LATENCY_SAMPLE_RATE}"
 require_positive_integer REPETITIONS "${REPETITIONS}"
 require_positive_integer EVENT_LOOPS "${EVENT_LOOPS}"
 require_positive_integer GNALLOY_WORKERS "${GNALLOY_WORKERS}"
+require_positive_integer GNALLOY_MAX_MESSAGES_PER_READ "${GNALLOY_MAX_MESSAGES_PER_READ}"
 require_positive_integer SERVER_GOMAXPROCS "${SERVER_GOMAXPROCS}"
 require_positive_integer CLIENT_GOMAXPROCS "${CLIENT_GOMAXPROCS}"
 require_non_negative_integer COOLDOWN_SECONDS "${COOLDOWN_SECONDS}"
@@ -305,8 +307,8 @@ SERVER_LOG="$(mktemp "${TMPDIR:-/tmp}/gnalloy-udp-server.XXXXXX")"
   printf 'cpus=%s governor=%s\n' "$(nproc)" "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || printf unknown)"
   printf 'serverCPUSet=%s clientCPUSet=%s serverGOMAXPROCS=%s clientGOMAXPROCS=%s eventLoops=%s\n' \
     "${SERVER_CPU_SET}" "${CLIENT_CPU_SET}" "${SERVER_GOMAXPROCS}" "${CLIENT_GOMAXPROCS}" "${EVENT_LOOPS}"
-  printf 'gnalloyWorkers=%s gnalloyBossCPUSet=%s gnalloyWorkerCPUSet=%s\n' \
-    "${GNALLOY_WORKERS}" "${GNALLOY_BOSS_CPU_SET}" "${GNALLOY_WORKER_CPU_SET}"
+  printf 'gnalloyWorkers=%s gnalloyBossCPUSet=%s gnalloyWorkerCPUSet=%s gnalloyMaxMessagesPerRead=%s\n' \
+    "${GNALLOY_WORKERS}" "${GNALLOY_BOSS_CPU_SET}" "${GNALLOY_WORKER_CPU_SET}" "${GNALLOY_MAX_MESSAGES_PER_READ}"
   printf 'connections=%s messages=%s warmupMessages=%s latencySampleRate=%s repetitions=%s cooldownSeconds=%s niceLevel=%s\n' \
     "${CONNECTIONS}" "${MESSAGES}" "${WARMUP_MESSAGES}" "${LATENCY_SAMPLE_RATE}" "${REPETITIONS}" "${COOLDOWN_SECONDS}" "${NICE_LEVEL}"
   printf 'excludedFrameworks=netpoll,fasthttp reason=no-comparable-udp-server\n'

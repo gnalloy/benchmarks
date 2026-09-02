@@ -57,9 +57,17 @@ func (udpEchoHandler) ChannelRead(ctx *channel.HandlerContext, msg any) {
 		ctx.FireChannelRead(msg)
 		return
 	}
-	if err := ctx.WriteAndFlush(msg); err != nil {
+	if err := ctx.Write(msg); err != nil {
 		ctx.FireExceptionCaught(err)
 	}
+}
+
+func (udpEchoHandler) ChannelReadComplete(ctx *channel.HandlerContext) {
+	if err := ctx.Flush(); err != nil {
+		ctx.FireExceptionCaught(err)
+		return
+	}
+	ctx.FireChannelReadComplete()
 }
 
 func (udpEchoHandler) ExceptionCaught(ctx *channel.HandlerContext, _ error) {

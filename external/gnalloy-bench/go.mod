@@ -12,7 +12,7 @@ require (
 	gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f
 	gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b
 	gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3
-	gnalloy.org/transport-udp v0.0.0-20260902053403-773bac6677a4
+	gnalloy.org/transport-udp v0.0.0-20260902060239-f376725bd024
 )
 
 require (

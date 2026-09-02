@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -54,5 +56,47 @@ func TestRunRejectsEmptyServerFramework(t *testing.T) {
 	err := run([]string{"-server-framework", " "}, &strings.Builder{})
 	if err == nil {
 		t.Fatal("expected empty server framework error")
+	}
+}
+
+func TestRunTLS(t *testing.T) {
+	body := httpbench.ResponseBody(8)
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		_, _ = writer.Write(body)
+	}))
+	server.TLS = &tls.Config{
+		MinVersion: tls.VersionTLS13,
+		MaxVersion: tls.VersionTLS13,
+		NextProtos: []string{"http/1.1"},
+	}
+	server.StartTLS()
+	defer server.Close()
+
+	var output strings.Builder
+	err := run([]string{
+		"-addr", server.Listener.Addr().String(),
+		"-payload", "8",
+		"-connections", "1",
+		"-messages", "1",
+		"-warmup-messages", "1",
+		"-latency-sample-rate", "1",
+		"-server-framework", "test",
+		"-tls",
+		"-tls-version", "1.3",
+		"-alpn", "http/1.1",
+		"-insecure-skip-verify",
+	}, &output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"protocol=https1",
+		"tlsVersion=1.3",
+		"negotiatedProtocol=http/1.1",
+		"errors=0",
+	} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("missing %q in %s", want, output.String())
+		}
 	}
 }

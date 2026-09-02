@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"gnalloy.org/benchmarks/internal/httpbench"
+	"gnalloy.org/benchmarks/internal/tlsbench"
 )
 
 func main() {
@@ -21,6 +22,7 @@ func main() {
 func run(args []string, stdout io.Writer) error {
 	cfg := httpbench.DefaultConfig()
 	serverFramework := "unknown"
+	tlsOptions := tlsbench.ClientOptions{Version: tlsbench.Version13, ALPN: "http/1.1"}
 	flags := flag.NewFlagSet("http1-load", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	flags.StringVar(&cfg.Addr, "addr", cfg.Addr, "HTTP/1 server address")
@@ -33,6 +35,12 @@ func run(args []string, stdout io.Writer) error {
 	flags.Int64Var(&cfg.TargetRate, "target-rate", cfg.TargetRate, "aggregate target requests per second; 0 runs without pacing")
 	flags.DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "overall timeout")
 	flags.StringVar(&serverFramework, "server-framework", serverFramework, "server implementation label")
+	flags.BoolVar(&tlsOptions.Enabled, "tls", tlsOptions.Enabled, "enable TLS")
+	flags.StringVar(&tlsOptions.Version, "tls-version", tlsOptions.Version, "TLS protocol version: 1.1, 1.2 or 1.3")
+	flags.StringVar(&tlsOptions.ALPN, "alpn", tlsOptions.ALPN, "comma-separated TLS ALPN protocols")
+	flags.StringVar(&tlsOptions.CipherSuites, "cipher-suites", tlsOptions.CipherSuites, "comma-separated TLS cipher suites")
+	flags.BoolVar(&tlsOptions.AllowInsecureCipherSuites, "allow-insecure-cipher-suites", tlsOptions.AllowInsecureCipherSuites, "allow legacy cipher suites")
+	flags.BoolVar(&tlsOptions.InsecureSkipVerify, "insecure-skip-verify", tlsOptions.InsecureSkipVerify, "skip certificate verification for isolated benchmarks")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -40,10 +48,28 @@ func run(args []string, stdout io.Writer) error {
 	if serverFramework == "" {
 		return fmt.Errorf("http1-load: empty server framework")
 	}
+	tlsConfig, err := tlsOptions.Build(cfg.Addr)
+	if err != nil {
+		return err
+	}
+	cfg.TLS = tlsConfig
+	protocol := "http1"
+	tlsVersion := ""
+	alpn := ""
+	cipherSuites := ""
+	if cfg.TLS != nil {
+		protocol = "https1"
+		alpn = tlsOptions.ALPN
+		tlsVersion, err = tlsbench.NormalizeVersion(tlsOptions.Version)
+		if err != nil {
+			return err
+		}
+		cipherSuites = tlsbench.CipherSuiteNames(cfg.TLS.CipherSuites)
+	}
 	result, err := httpbench.Run(context.Background(), cfg)
 	if result.TotalRequests > 0 {
-		fmt.Fprintf(stdout, "framework=common-http1-client serverFramework=%s protocol=http1 payload=%d connections=%d messages=%d warmupMessages=%d targetRate=%d latencySampleRate=%d latencySamples=%d p50LatencyNs=%d p95LatencyNs=%d p99LatencyNs=%d p999LatencyNs=%d maxLatencyNs=%d scheduleDelaySamples=%d p50ScheduleDelayNs=%d p95ScheduleDelayNs=%d p99ScheduleDelayNs=%d p999ScheduleDelayNs=%d maxScheduleDelayNs=%d roundTripLatencySamples=%d p50RoundTripLatencyNs=%d p95RoundTripLatencyNs=%d p99RoundTripLatencyNs=%d p999RoundTripLatencyNs=%d maxRoundTripLatencyNs=%d total=%d errors=%d elapsed=%s throughput=%.2f ops/s\n",
-			serverFramework, cfg.Payload, cfg.Connections, cfg.Messages, cfg.WarmupMessages, cfg.TargetRate, cfg.LatencySampleRate,
+		fmt.Fprintf(stdout, "framework=common-http1-client serverFramework=%s protocol=%s tlsVersion=%s alpn=%s negotiatedProtocol=%s cipherSuites=%s payload=%d connections=%d messages=%d warmupMessages=%d targetRate=%d latencySampleRate=%d latencySamples=%d p50LatencyNs=%d p95LatencyNs=%d p99LatencyNs=%d p999LatencyNs=%d maxLatencyNs=%d scheduleDelaySamples=%d p50ScheduleDelayNs=%d p95ScheduleDelayNs=%d p99ScheduleDelayNs=%d p999ScheduleDelayNs=%d maxScheduleDelayNs=%d roundTripLatencySamples=%d p50RoundTripLatencyNs=%d p95RoundTripLatencyNs=%d p99RoundTripLatencyNs=%d p999RoundTripLatencyNs=%d maxRoundTripLatencyNs=%d total=%d errors=%d elapsed=%s throughput=%.2f ops/s\n",
+			serverFramework, protocol, tlsVersion, alpn, result.NegotiatedProtocol, cipherSuites, cfg.Payload, cfg.Connections, cfg.Messages, cfg.WarmupMessages, cfg.TargetRate, cfg.LatencySampleRate,
 			result.Latency.Samples, result.Latency.P50.Nanoseconds(), result.Latency.P95.Nanoseconds(), result.Latency.P99.Nanoseconds(), result.Latency.P999.Nanoseconds(), result.Latency.Max.Nanoseconds(),
 			result.ScheduleDelay.Samples, result.ScheduleDelay.P50.Nanoseconds(), result.ScheduleDelay.P95.Nanoseconds(), result.ScheduleDelay.P99.Nanoseconds(), result.ScheduleDelay.P999.Nanoseconds(), result.ScheduleDelay.Max.Nanoseconds(),
 			result.RoundTrip.Samples, result.RoundTrip.P50.Nanoseconds(), result.RoundTrip.P95.Nanoseconds(), result.RoundTrip.P99.Nanoseconds(), result.RoundTrip.P999.Nanoseconds(), result.RoundTrip.Max.Nanoseconds(),

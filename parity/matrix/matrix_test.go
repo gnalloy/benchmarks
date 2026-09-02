@@ -20,6 +20,8 @@ func TestLinuxFullSpecCoversRequestedProtocolsAndFrameworks(t *testing.T) {
 	requireScenario(t, spec, "netty epoll http3 tls13 1KiB", false)
 	requireScenario(t, spec, "gnalloy rfc9000 quic-stream tls13 1KiB", false)
 	requireScenario(t, spec, "netpoll udp echo unsupported", true)
+	requireScenario(t, spec, "gnet http1 unsupported", true)
+	requireScenario(t, spec, "netpoll http1 unsupported", true)
 	netty := requireScenario(t, spec, "netty epoll tcp-echo 1KiB", false)
 	if command := strings.Join(netty.Command, " "); !strings.Contains(command, "--payload 1024") || strings.Contains(command, " -payload ") {
 		t.Fatalf("netty command=%q, want double-dash benchmark flags", command)

@@ -43,13 +43,13 @@ It does not absorb neighboring module responsibilities. Core primitives stay in 
 - `gnalloy.org/benchmarks/cmd/gnalloy-parity` (`main`)
 - `gnalloy.org/benchmarks/external/internal/benchh2` (`benchh2`)
 - `gnalloy.org/benchmarks/external/internal/benchh3` (`benchh3`)
-- `gnalloy.org/benchmarks/external/internal/benchhttp` (`benchhttp`)
 - `gnalloy.org/benchmarks/external/internal/benchtls` (`benchtls`)
 - `gnalloy.org/benchmarks/microbench` (`microbench`)
 - `gnalloy.org/benchmarks/parity` (`parity`)
 
 ## Gnalloy Dependencies
 
+- `gnalloy.org/codec-http1`
 - `gnalloy.org/codec-http3`
 - `gnalloy.org/gnalloy`
 - `gnalloy.org/transport-http3`

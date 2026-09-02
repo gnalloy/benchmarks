@@ -250,15 +250,10 @@ func (b *specBuilder) addHTTP1() {
 	for _, size := range payloadsSmall {
 		b.add(gnalloyCommand(b.profile.GnalloyBackend, protocolHTTP1, size, nil))
 		b.add(nettyCommand(b.profile.NettyBackend, protocolHTTP1, size, nil))
-		b.add(gnetCommand(protocolHTTP1, size))
 		b.add(fasthttpCommand(protocolHTTP1, size, nil))
-		if b.profile.NetpollSupported {
-			b.add(netpollCommand(protocolHTTP1, size))
-		}
 	}
-	if !b.profile.NetpollSupported {
-		b.unsupported(frameworkNetpoll, protocolHTTP1, "http1", "CloudWeGo netpoll harness is not supported on this platform")
-	}
+	b.unsupported(frameworkGnet, protocolHTTP1, "http1", "gnet does not provide an HTTP codec; benchmark-owned parsing is prohibited")
+	b.unsupported(frameworkNetpoll, protocolHTTP1, "http1", "CloudWeGo netpoll does not provide an HTTP codec; benchmark-owned parsing is prohibited")
 }
 
 func (b *specBuilder) addHTTPS1() {

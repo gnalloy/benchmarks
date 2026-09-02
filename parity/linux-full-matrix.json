@@ -783,40 +783,6 @@
       ]
     },
     {
-      "name": "gnet poller http1 128B",
-      "framework": "gnet",
-      "protocol": "http1",
-      "payload": "128B",
-      "backend": "poller",
-      "warmup": 1,
-      "repeat": 3,
-      "workDir": "${REPO_ROOT}",
-      "command": [
-        "${GNET_BENCH}",
-        "-protocol",
-        "http1",
-        "-payload",
-        "128",
-        "-connections",
-        "${CONNECTIONS}",
-        "-messages",
-        "${MESSAGES}",
-        "-latency-sample-rate",
-        "${LATENCY_SAMPLE_RATE}",
-        "-warmup-messages",
-        "${WARMUP_MESSAGES}",
-        "-timeout",
-        "${COMMAND_TIMEOUT}"
-      ],
-      "timeout": "16m0s",
-      "tags": [
-        "external",
-        "gnet",
-        "http1",
-        "payload-128"
-      ]
-    },
-    {
       "name": "fasthttp http1 128B",
       "framework": "fasthttp",
       "protocol": "http1",
@@ -846,40 +812,6 @@
       "tags": [
         "external",
         "fasthttp",
-        "http1",
-        "payload-128"
-      ]
-    },
-    {
-      "name": "netpoll poller http1 128B",
-      "framework": "netpoll",
-      "protocol": "http1",
-      "payload": "128B",
-      "backend": "poller",
-      "warmup": 1,
-      "repeat": 3,
-      "workDir": "${REPO_ROOT}",
-      "command": [
-        "${NETPOLL_BENCH}",
-        "-protocol",
-        "http1",
-        "-payload",
-        "128",
-        "-connections",
-        "${CONNECTIONS}",
-        "-messages",
-        "${MESSAGES}",
-        "-latency-sample-rate",
-        "${LATENCY_SAMPLE_RATE}",
-        "-warmup-messages",
-        "${WARMUP_MESSAGES}",
-        "-timeout",
-        "${COMMAND_TIMEOUT}"
-      ],
-      "timeout": "16m0s",
-      "tags": [
-        "external",
-        "netpoll",
         "http1",
         "payload-128"
       ]
@@ -961,40 +893,6 @@
       ]
     },
     {
-      "name": "gnet poller http1 1KiB",
-      "framework": "gnet",
-      "protocol": "http1",
-      "payload": "1KiB",
-      "backend": "poller",
-      "warmup": 1,
-      "repeat": 3,
-      "workDir": "${REPO_ROOT}",
-      "command": [
-        "${GNET_BENCH}",
-        "-protocol",
-        "http1",
-        "-payload",
-        "1024",
-        "-connections",
-        "${CONNECTIONS}",
-        "-messages",
-        "${MESSAGES}",
-        "-latency-sample-rate",
-        "${LATENCY_SAMPLE_RATE}",
-        "-warmup-messages",
-        "${WARMUP_MESSAGES}",
-        "-timeout",
-        "${COMMAND_TIMEOUT}"
-      ],
-      "timeout": "16m0s",
-      "tags": [
-        "external",
-        "gnet",
-        "http1",
-        "payload-1ki"
-      ]
-    },
-    {
       "name": "fasthttp http1 1KiB",
       "framework": "fasthttp",
       "protocol": "http1",
@@ -1029,38 +927,32 @@
       ]
     },
     {
-      "name": "netpoll poller http1 1KiB",
+      "name": "gnet http1 unsupported",
+      "framework": "gnet",
+      "protocol": "http1",
+      "backend": "unsupported",
+      "tags": [
+        "linux",
+        "gnet",
+        "http1",
+        "unsupported"
+      ],
+      "skip": true,
+      "skipReason": "gnet does not provide an HTTP codec; benchmark-owned parsing is prohibited"
+    },
+    {
+      "name": "netpoll http1 unsupported",
       "framework": "netpoll",
       "protocol": "http1",
-      "payload": "1KiB",
-      "backend": "poller",
-      "warmup": 1,
-      "repeat": 3,
-      "workDir": "${REPO_ROOT}",
-      "command": [
-        "${NETPOLL_BENCH}",
-        "-protocol",
-        "http1",
-        "-payload",
-        "1024",
-        "-connections",
-        "${CONNECTIONS}",
-        "-messages",
-        "${MESSAGES}",
-        "-latency-sample-rate",
-        "${LATENCY_SAMPLE_RATE}",
-        "-warmup-messages",
-        "${WARMUP_MESSAGES}",
-        "-timeout",
-        "${COMMAND_TIMEOUT}"
-      ],
-      "timeout": "16m0s",
+      "backend": "unsupported",
       "tags": [
-        "external",
+        "linux",
         "netpoll",
         "http1",
-        "payload-1ki"
-      ]
+        "unsupported"
+      ],
+      "skip": true,
+      "skipReason": "CloudWeGo netpoll does not provide an HTTP codec; benchmark-owned parsing is prohibited"
     },
     {
       "name": "gnalloy epoll https1 tls11 128B",

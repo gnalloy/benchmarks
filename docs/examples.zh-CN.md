@@ -18,7 +18,6 @@ go doc gnalloy.org/benchmarks
 - `gnalloy.org/benchmarks/cmd/gnalloy-benchdiff`
 - `gnalloy.org/benchmarks/external/internal/benchh2`
 - `gnalloy.org/benchmarks/external/internal/benchh3`
-- `gnalloy.org/benchmarks/external/internal/benchhttp`
 - `gnalloy.org/benchmarks/external/internal/benchtls`
 - `gnalloy.org/benchmarks/microbench`
 - `gnalloy.org/benchmarks/parity`
@@ -30,7 +29,6 @@ go doc gnalloy.org/benchmarks/benchdiff
 go doc gnalloy.org/benchmarks/cmd/gnalloy-benchdiff
 go doc gnalloy.org/benchmarks/external/internal/benchh2
 go doc gnalloy.org/benchmarks/external/internal/benchh3
-go doc gnalloy.org/benchmarks/external/internal/benchhttp
 go doc gnalloy.org/benchmarks/external/internal/benchtls
 go doc gnalloy.org/benchmarks/microbench
 go doc gnalloy.org/benchmarks/parity
@@ -51,10 +49,6 @@ go doc gnalloy.org/benchmarks/parity
 - `type Config struct{ ... }`
 - `type LatencySummary struct{ ... }`
 - `type Result struct{ ... }`
-- `const ProtocolHTTP1 = "http1"`
-- `func RequestBytes(host string) []byte`
-- `func ResponseBody(size int) []byte`
-- `func ResponseBytes(payload int) []byte`
 
 ## 案例 3：将可执行测试作为行为示例
 
@@ -80,13 +74,11 @@ GOWORK=off GOTOOLCHAIN=local go test ./... -run Test -count=1
 - `TestDefaultWorkerCountKeepsNonIOCPParallelism`
 - `TestDefaultWorkerCountNormalizesInvalidCPUCount`
 - `TestElapsedLatencyNanosIsPositive`
-- `TestHTTP1RawHandlerBatchesResponsesFromOneRead`
-- `TestHTTP1RawHandlerHandlesFragmentedRequest`
-- `TestHTTP1RawHandlerWritesFixedResponse`
 
 ## 案例 4：跨模块装配
 
 本模块的直接 Gnalloy 依赖：
+- `gnalloy.org/codec-http1`
 - `gnalloy.org/codec-http3`
 - `gnalloy.org/gnalloy`
 - `gnalloy.org/transport-http3`

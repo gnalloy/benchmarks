@@ -695,40 +695,6 @@
       ]
     },
     {
-      "name": "gnet poller http1 128B",
-      "framework": "gnet",
-      "protocol": "http1",
-      "payload": "128B",
-      "backend": "poller",
-      "warmup": 1,
-      "repeat": 3,
-      "workDir": "${REPO_ROOT}",
-      "command": [
-        "${GNET_BENCH}",
-        "-protocol",
-        "http1",
-        "-payload",
-        "128",
-        "-connections",
-        "${CONNECTIONS}",
-        "-messages",
-        "${MESSAGES}",
-        "-latency-sample-rate",
-        "${LATENCY_SAMPLE_RATE}",
-        "-warmup-messages",
-        "${WARMUP_MESSAGES}",
-        "-timeout",
-        "${COMMAND_TIMEOUT}"
-      ],
-      "timeout": "16m0s",
-      "tags": [
-        "external",
-        "gnet",
-        "http1",
-        "payload-128"
-      ]
-    },
-    {
       "name": "fasthttp http1 128B",
       "framework": "fasthttp",
       "protocol": "http1",
@@ -839,40 +805,6 @@
       ]
     },
     {
-      "name": "gnet poller http1 1KiB",
-      "framework": "gnet",
-      "protocol": "http1",
-      "payload": "1KiB",
-      "backend": "poller",
-      "warmup": 1,
-      "repeat": 3,
-      "workDir": "${REPO_ROOT}",
-      "command": [
-        "${GNET_BENCH}",
-        "-protocol",
-        "http1",
-        "-payload",
-        "1024",
-        "-connections",
-        "${CONNECTIONS}",
-        "-messages",
-        "${MESSAGES}",
-        "-latency-sample-rate",
-        "${LATENCY_SAMPLE_RATE}",
-        "-warmup-messages",
-        "${WARMUP_MESSAGES}",
-        "-timeout",
-        "${COMMAND_TIMEOUT}"
-      ],
-      "timeout": "16m0s",
-      "tags": [
-        "external",
-        "gnet",
-        "http1",
-        "payload-1ki"
-      ]
-    },
-    {
       "name": "fasthttp http1 1KiB",
       "framework": "fasthttp",
       "protocol": "http1",
@@ -907,6 +839,20 @@
       ]
     },
     {
+      "name": "gnet http1 unsupported",
+      "framework": "gnet",
+      "protocol": "http1",
+      "backend": "unsupported",
+      "tags": [
+        "windows",
+        "gnet",
+        "http1",
+        "unsupported"
+      ],
+      "skip": true,
+      "skipReason": "gnet does not provide an HTTP codec; benchmark-owned parsing is prohibited"
+    },
+    {
       "name": "netpoll http1 unsupported",
       "framework": "netpoll",
       "protocol": "http1",
@@ -918,7 +864,7 @@
         "unsupported"
       ],
       "skip": true,
-      "skipReason": "CloudWeGo netpoll harness is not supported on this platform"
+      "skipReason": "CloudWeGo netpoll does not provide an HTTP codec; benchmark-owned parsing is prohibited"
     },
     {
       "name": "gnalloy iocp https1 tls11 128B",

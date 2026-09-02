@@ -510,12 +510,15 @@ func TestLinuxFullMatrixSpecLoads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(spec.Scenarios) != 85 {
+	if len(spec.Scenarios) != 83 {
 		t.Fatalf("scenarios=%d, want linux full matrix scenarios", len(spec.Scenarios))
 	}
 	seen := map[string]bool{}
 	for _, scenario := range spec.Scenarios {
 		seen[scenario.Framework+" "+scenario.Protocol] = true
+		if scenario.Protocol == "http1" && (scenario.Framework == "gnet" || scenario.Framework == "netpoll") && !scenario.Skip {
+			t.Fatalf("framework without HTTP codec must be N/A: %+v", scenario)
+		}
 		command := strings.Join(scenario.Command, " ")
 		if scenario.Framework == "netty" && !scenario.Skip {
 			if !strings.Contains(command, "--payload") || strings.Contains(command, " -payload ") {
@@ -532,7 +535,7 @@ func TestLinuxFullMatrixSpecLoads(t *testing.T) {
 	for _, key := range []string{
 		"gnalloy tcp-echo", "gnalloy udp-echo", "gnalloy http3", "gnalloy quic-stream",
 		"netty tcp-echo", "netty udp-echo", "netty http3", "netty quic-stream",
-		"gnet tcp-echo", "gnet udp-echo", "fasthttp http1", "fasthttp https1", "netpoll http1",
+		"gnet tcp-echo", "gnet udp-echo", "gnet http1", "fasthttp http1", "fasthttp https1", "netpoll http1",
 	} {
 		if !seen[key] {
 			t.Fatalf("scenario family %q missing", key)
@@ -551,7 +554,7 @@ func TestWindowsFullMatrixSpecLoads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(spec.Scenarios) != 82 {
+	if len(spec.Scenarios) != 81 {
 		t.Fatalf("scenarios=%d, want windows full matrix scenarios", len(spec.Scenarios))
 	}
 	for _, scenario := range spec.Scenarios {

@@ -41,9 +41,6 @@ Total discovered entry points: 116.
 - `TestDefaultWorkerCountKeepsNonIOCPParallelism`
 - `TestDefaultWorkerCountNormalizesInvalidCPUCount`
 - `TestElapsedLatencyNanosIsPositive`
-- `TestHTTP1RawHandlerBatchesResponsesFromOneRead`
-- `TestHTTP1RawHandlerHandlesFragmentedRequest`
-- `TestHTTP1RawHandlerWritesFixedResponse`
 - `TestHTTP2MatrixSpecLoads`
 - `TestHTTP3MatrixSpecLoads`
 - `TestHTTPS1ALPNMatrixSpecLoads`
@@ -81,7 +78,6 @@ Total discovered entry points: 116.
 - `TestParseConfigResolvesAutoWorkers`
 - `TestParseConfigResolvesNativePerformanceFlags`
 - `TestParseConfigSupportsCipherSuites`
-- `TestParseConfigSupportsHTTP1RawMode`
 - `TestParseConfigSupportsHTTP2Family`
 - `TestParseConfigSupportsHTTP3`
 - `TestParseConfigSupportsHTTPS1ALPN`
@@ -96,7 +92,6 @@ Total discovered entry points: 116.
 - `TestResolveBenchmarkSelectionKeepsExplicitOverrides`
 - `TestResolveBenchmarkSelectionRejectsUnknownSuite`
 - `TestResolveBenchmarkSelectionUsesSuiteDefaults`
-- `TestResponseBytesUsesRequestedPayload`
 - `TestRunBenchmarkHTTP1`
 - `TestRunBenchmarkHTTP2`
 - `TestRunBenchmarkHTTPS1`
@@ -121,7 +116,6 @@ Total discovered entry points: 116.
 - `TestSelfSignedCertificateSupportsIPName`
 - `TestSelfSignedCertificateSupportsRSA`
 - `TestSelfSignedCertificateUsesDefaultServerName`
-- `TestServerStateCountsSplitRequests`
 - `TestServerTLSConfigUsesTLS13`
 - `TestSummarizeLatencySamples`
 - `TestTCPMatrixIncludesOptimizedIOUringScenario`

@@ -187,7 +187,7 @@ function Start-RemoteServer {
     $command = @'
 cd '__REMOTE_REPO__'
 : >'__REMOTE_LOG__'
-nohup env SERVER_ADDR='__BIND_ADDR__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' GNET_BENCH='__REMOTE_REPO__/external/bin/gnet-bench' NETPOLL_BENCH='__REMOTE_REPO__/external/bin/netpoll-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
+nohup env SERVER_ADDR='__BIND_ADDR__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
 '@
     $command = $command.Replace("__REMOTE_REPO__", $ServerRepo).
         Replace("__REMOTE_LOG__", $remoteLog).
@@ -266,6 +266,17 @@ function Invoke-Client {
 
 function Invoke-Case {
     param([string]$Framework, [int]$Payload, [int]$Run)
+    if ($Framework -eq "gnet" -or $Framework -eq "netpoll") {
+        $reason = if ($Framework -eq "gnet") {
+            "gnet does not provide an HTTP codec; benchmark-owned parsing is prohibited"
+        } else {
+            "CloudWeGo netpoll does not provide an HTTP codec; benchmark-owned parsing is prohibited"
+        }
+        $case = "case=$Framework payload=$Payload run=$Run status=N/A reason=$reason"
+        Write-Output $case
+        Add-Content -LiteralPath $Output -Value $case -Encoding utf8
+        return
+    }
     $case = "case=$Framework payload=$Payload run=$Run"
     Write-Output $case
     Add-Content -LiteralPath $Output -Value $case -Encoding utf8
@@ -325,14 +336,15 @@ try {
         "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
         "crossHost=true clientHost=$ClientHost clientAddress=$ClientAddress serverHost=$ServerHost serverAddress=$TargetAddress",
         "connections=$Connections messages=$Messages warmupMessages=$WarmupMessages targetRate=$TargetRate latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds frameworks=$($Frameworks -join ',')",
-        "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyHTTP1Pipeline=tcp+channel+codec/http1+handler performanceGovernor=$SetPerformanceGovernor"
+        "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyHTTP1Pipeline=tcp+channel+codec-http1+handler performanceGovernor=$SetPerformanceGovernor",
+        "unsupportedFrameworks=gnet,netpoll status=N/A reason=no-framework-http-codec"
     ) -Encoding utf8
     $serverMetadataCommand = @'
 printf 'serverHostname=%s\n' "$(hostname)"
 uname -srmo
 awk -F ': ' '/^model name/{print "serverCPU=" $2; exit}' /proc/cpuinfo
 printf 'serverGovernor=%s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || printf unknown)"
-sha256sum '__SERVER_REPO__/external/bin/gnalloy-bench' '__SERVER_REPO__/external/bin/gnet-bench' '__SERVER_REPO__/external/bin/netpoll-bench' '__SERVER_REPO__/external/bin/fasthttp-bench' '__SERVER_REPO__/external/bin/netty-bench.jar'
+sha256sum '__SERVER_REPO__/external/bin/gnalloy-bench' '__SERVER_REPO__/external/bin/fasthttp-bench' '__SERVER_REPO__/external/bin/netty-bench.jar'
 '@.Replace("__SERVER_REPO__", $ServerRepo)
     $serverMetadata = Invoke-SSH -HostName $ServerHost -Command $serverMetadataCommand -IgnoreStandardError
     Add-Content -LiteralPath $Output -Value $serverMetadata -Encoding utf8

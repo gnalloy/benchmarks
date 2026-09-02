@@ -56,22 +56,6 @@ type Result struct{ ... }
     func RunLoad(parent context.Context, cfg Config) (Result, error)
 ```
 
-### `gnalloy.org/benchmarks/external/internal/benchhttp`
-
-包名：`benchhttp`
-
-```text
-const ProtocolHTTP1 = "http1"
-func RequestBytes(host string) []byte
-func ResponseBody(size int) []byte
-func ResponseBytes(payload int) []byte
-type Config struct{ ... }
-type LatencySummary struct{ ... }
-type Result struct{ ... }
-    func RunLoad(parent context.Context, cfg Config) (Result, error)
-type ServerState struct{ ... }
-```
-
 ### `gnalloy.org/benchmarks/external/internal/benchtls`
 
 包名：`benchtls`

@@ -18,8 +18,6 @@ GNALLOY_RUNTIME_TRACE="${GNALLOY_RUNTIME_TRACE:-}"
 NICE_LEVEL="${NICE_LEVEL:-0}"
 SERVER_PID_FILE="${SERVER_PID_FILE:-/tmp/gnalloy-http1-cross-host.pid}"
 GNALLOY_BENCH="${GNALLOY_BENCH:-${REPO_ROOT}/external/bin/gnalloy-bench}"
-GNET_BENCH="${GNET_BENCH:-${REPO_ROOT}/external/bin/gnet-bench}"
-NETPOLL_BENCH="${NETPOLL_BENCH:-${REPO_ROOT}/external/bin/netpoll-bench}"
 FASTHTTP_BENCH="${FASTHTTP_BENCH:-${REPO_ROOT}/external/bin/fasthttp-bench}"
 NETTY_BENCH_JAR="${NETTY_BENCH_JAR:-${REPO_ROOT}/external/bin/netty-bench.jar}"
 JAVA_BIN="${JAVA_BIN:-/opt/software/java21/bin/java}"
@@ -52,12 +50,6 @@ require_executable() {
 case "${FRAMEWORK}" in
   gnalloy)
     require_executable "${GNALLOY_BENCH}"
-    ;;
-  gnet)
-    require_executable "${GNET_BENCH}"
-    ;;
-  netpoll)
-    require_executable "${NETPOLL_BENCH}"
     ;;
   fasthttp)
     require_executable "${FASTHTTP_BENCH}"
@@ -102,15 +94,6 @@ case "${FRAMEWORK}" in
       -protocol http1 -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -backend epoll -boss 1 \
       -workers "${GNALLOY_WORKERS}" -boss-cpus "${GNALLOY_BOSS_CPU_SET}" \
       -worker-cpus "${GNALLOY_WORKER_CPU_SET}" -reuseport=true -timeout 5m "${profile_args[@]}"
-    ;;
-  gnet)
-    exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${GNET_BENCH}" \
-      -protocol http1 -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" \
-      -event-loops "${EVENT_LOOPS}" -multicore=true -timeout 5m
-    ;;
-  netpoll)
-    exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${NETPOLL_BENCH}" \
-      -protocol http1 -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -timeout 5m
     ;;
   fasthttp)
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${FASTHTTP_BENCH}" \

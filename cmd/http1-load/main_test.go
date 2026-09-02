@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"net"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -14,29 +14,14 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	done := make(chan struct{})
+	body := httpbench.ResponseBody(8)
+	server := &http.Server{Handler: http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		_, _ = writer.Write(body)
+	})}
 	go func() {
-		defer close(done)
-		defer listener.Close()
-		conn, acceptErr := listener.Accept()
-		if acceptErr != nil {
-			return
-		}
-		defer conn.Close()
-		reader := bufio.NewReader(conn)
-		response := httpbench.ResponseBytes(8)
-		for range 2 {
-			for {
-				line, readErr := reader.ReadString('\n')
-				if readErr != nil || line == "\r\n" {
-					break
-				}
-			}
-			if _, writeErr := conn.Write(response); writeErr != nil {
-				return
-			}
-		}
+		_ = server.Serve(listener)
 	}()
+	t.Cleanup(func() { _ = server.Close() })
 
 	var output strings.Builder
 	err = run([]string{
@@ -63,7 +48,6 @@ func TestRun(t *testing.T) {
 			t.Fatalf("missing %q in %s", want, output.String())
 		}
 	}
-	<-done
 }
 
 func TestRunRejectsEmptyServerFramework(t *testing.T) {

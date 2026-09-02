@@ -10,6 +10,10 @@ github.com/quic-go/quic-go v0.61.0 h1:ui88A53s8MSVYLC56en0KQ17HARk+9986Dn0SBfKNv
 github.com/quic-go/quic-go v0.61.0/go.mod h1:9So2anK4Tp22URSQq00k+Vo2PNkle96ycDPDHL4s9vs=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
+gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98 h1:Hilym9O+lbWeRljPkltt4qPTVuvpHJ8AnPEnJbxDItw=
+gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98/go.mod h1:Y5Bk5clhC0i3lilHSjH1bxmc0Ls7fRqSvYf5mV0PXUw=
+gnalloy.org/codec-http1 v0.0.0-20260831155325-667cf0239537 h1:VA1UHimrHonzOOpE4gIwDG0pQSGGKOwHwgzx1JXoVEc=
+gnalloy.org/codec-http1 v0.0.0-20260831155325-667cf0239537/go.mod h1:3P7UGfCb5nkrdaL7KTdRN5yf4LCZBxBXUjntNmD2Ww4=
 gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81 h1:F898MYKxFmbSkz+TQMV2dCASLfP41nVOo2G77IA8v1Y=
 gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81/go.mod h1:92crEBwS/e4gpNyEIokXDmYi7tg1CJnhM3WI2gwsLsw=
 gnalloy.org/gnalloy v0.0.0-20260831153720-533bb39b2ad6 h1:YtIsp2u+paX8W0rCuIP71AUtjIC82OAXa0FVF8loNbk=

@@ -1,10 +1,10 @@
 package httpbench
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"net"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -46,7 +46,7 @@ func TestServerStateCountsSplitRequests(t *testing.T) {
 func TestRunSaturatedAndPaced(t *testing.T) {
 	for _, targetRate := range []int64{0, 1000} {
 		t.Run(rateName(targetRate), func(t *testing.T) {
-			listener, done := startTestServer(t, 3, 16)
+			listener := startTestServer(t, 16)
 			result, err := Run(context.Background(), Config{
 				Addr:              listener.Addr().String(),
 				Payload:           16,
@@ -66,17 +66,7 @@ func TestRunSaturatedAndPaced(t *testing.T) {
 			if targetRate > 0 && result.ScheduleDelay.Samples != 2 {
 				t.Fatalf("scheduleDelay=%+v", result.ScheduleDelay)
 			}
-			<-done
 		})
-	}
-}
-
-func TestParseDecimal(t *testing.T) {
-	if got, err := parseDecimal([]byte("1024")); err != nil || got != 1024 {
-		t.Fatalf("got=%d err=%v", got, err)
-	}
-	if _, err := parseDecimal([]byte("1KiB")); err == nil {
-		t.Fatal("expected invalid decimal error")
 	}
 }
 
@@ -88,36 +78,29 @@ func TestPhasePacerDistributesAggregateRate(t *testing.T) {
 	}
 }
 
-func startTestServer(t *testing.T, exchanges int, payload int) (net.Listener, <-chan struct{}) {
+func startTestServer(t *testing.T, payload int) net.Listener {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan struct{})
+	body := ResponseBody(payload)
+	server := &http.Server{
+		Handler: http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+			writer.Header().Set("Content-Type", "application/octet-stream")
+			_, _ = writer.Write(body)
+		}),
+	}
 	go func() {
 		defer close(done)
-		defer listener.Close()
-		conn, err := listener.Accept()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-		reader := bufio.NewReader(conn)
-		response := ResponseBytes(payload)
-		for range exchanges {
-			for {
-				line, readErr := reader.ReadString('\n')
-				if readErr != nil || line == "\r\n" {
-					break
-				}
-			}
-			if _, err := conn.Write(response); err != nil {
-				return
-			}
-		}
+		_ = server.Serve(listener)
 	}()
-	return listener, done
+	t.Cleanup(func() {
+		_ = server.Close()
+		<-done
+	})
+	return listener
 }
 
 func rateName(rate int64) string {

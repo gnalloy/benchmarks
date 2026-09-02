@@ -197,8 +197,5 @@ func runPacedClient(ctx context.Context, client *client, clientID int, messages 
 }
 
 func exchange(client *client) error {
-	if err := writeFull(client.conn, client.request); err != nil {
-		return err
-	}
-	return readResponse(client.reader, client.reply, client.body)
+	return client.protocol.exchange()
 }

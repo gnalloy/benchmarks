@@ -21,6 +21,11 @@ func runCLI(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	stopAllocProfile, err := startAllocProfile(cfg.AllocProfile)
+	if err != nil {
+		return err
+	}
+	defer stopAllocProfile()
 	stopProfile, err := startCPUProfile(cfg.CPUProfile)
 	if err != nil {
 		return err

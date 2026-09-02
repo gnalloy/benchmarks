@@ -47,6 +47,7 @@ type config struct {
 	LatencySampleRate         int
 	WarmupMessages            int
 	CPUProfile                string
+	AllocProfile              string
 	RuntimeTrace              string
 	ALPN                      string
 	TLSVersion                string
@@ -107,6 +108,7 @@ func parseConfig(args []string) (config, error) {
 	fs.IntVar(&cfg.LatencySampleRate, "latency-sample-rate", cfg.LatencySampleRate, "record one round-trip latency sample every N messages per connection; 0 disables latency sampling")
 	fs.IntVar(&cfg.WarmupMessages, "warmup-messages", cfg.WarmupMessages, "messages per connection sent before timed measurement; 0 disables in-process warmup")
 	fs.StringVar(&cfg.CPUProfile, "cpuprofile", cfg.CPUProfile, "write Go CPU profile to this file")
+	fs.StringVar(&cfg.AllocProfile, "allocprofile", cfg.AllocProfile, "write Go allocation profile to this file on exit")
 	fs.StringVar(&cfg.RuntimeTrace, "trace", cfg.RuntimeTrace, "write Go runtime trace to this file")
 	fs.StringVar(&cfg.ALPN, "alpn", cfg.ALPN, "comma-separated TLS ALPN protocols for HTTPS protocols")
 	fs.StringVar(&cfg.TLSVersion, "tls-version", cfg.TLSVersion, "TLS protocol version: 1.1, 1.2 or 1.3")

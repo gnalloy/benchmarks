@@ -36,6 +36,7 @@ func TestParseConfig(t *testing.T) {
 		"-reuseport",
 		"-warmup-messages", "7",
 		"-cpuprofile", "cpu.pprof",
+		"-allocprofile", "alloc.pprof",
 		"-trace", "runtime.trace",
 	})
 	if err != nil {
@@ -64,6 +65,9 @@ func TestParseConfig(t *testing.T) {
 	}
 	if cfg.RuntimeTrace != "runtime.trace" {
 		t.Fatalf("runtimeTrace=%q, want runtime.trace", cfg.RuntimeTrace)
+	}
+	if cfg.AllocProfile != "alloc.pprof" {
+		t.Fatalf("allocProfile=%q, want alloc.pprof", cfg.AllocProfile)
 	}
 	if cfg.BossCPUs != "0" || len(cfg.BossCPUSet) != 1 || cfg.BossCPUSet[0] != 0 {
 		t.Fatalf("boss CPU set=%q/%v, want 0/[0]", cfg.BossCPUs, cfg.BossCPUSet)

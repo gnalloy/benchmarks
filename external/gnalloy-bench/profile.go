@@ -25,6 +25,23 @@ func startCPUProfile(path string) (func(), error) {
 	}, nil
 }
 
+func startAllocProfile(path string) (func(), error) {
+	if strings.TrimSpace(path) == "" {
+		return func() {}, nil
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		return nil, err
+	}
+	return func() {
+		profile := pprof.Lookup("allocs")
+		if profile != nil {
+			_ = profile.WriteTo(file, 0)
+		}
+		_ = file.Close()
+	}, nil
+}
+
 func startRuntimeTrace(path string) (func(), error) {
 	if strings.TrimSpace(path) == "" {
 		return func() {}, nil

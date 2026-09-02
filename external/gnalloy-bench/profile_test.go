@@ -33,6 +33,33 @@ func TestStartCPUProfileAllowsEmptyPath(t *testing.T) {
 	stop()
 }
 
+func TestStartAllocProfileWritesFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "alloc.pprof")
+	stop, err := startAllocProfile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 1000; i++ {
+		_ = make([]byte, i+1)
+	}
+	stop()
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Size() == 0 {
+		t.Fatal("allocation profile is empty")
+	}
+}
+
+func TestStartAllocProfileAllowsEmptyPath(t *testing.T) {
+	stop, err := startAllocProfile("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stop()
+}
+
 func TestStartRuntimeTraceWritesFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "runtime.trace")
 	stop, err := startRuntimeTrace(path)

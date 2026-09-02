@@ -29,6 +29,9 @@ func TestRunUsesCommonUDPEchoClient(t *testing.T) {
 	if result.Latency.Samples != 40 || result.Latency.P99 <= 0 || result.Throughput <= 0 {
 		t.Fatalf("latency=%+v throughput=%f", result.Latency, result.Throughput)
 	}
+	if result.RoundTrip.Samples != 40 || result.RoundTrip.P99 <= 0 || result.ScheduleDelay.Samples != 0 {
+		t.Fatalf("roundTrip=%+v scheduleDelay=%+v", result.RoundTrip, result.ScheduleDelay)
+	}
 }
 
 func TestConfigValidation(t *testing.T) {
@@ -64,8 +67,12 @@ func TestRunPacesAggregateTargetRate(t *testing.T) {
 	if elapsed := time.Since(started); elapsed < 70*time.Millisecond {
 		t.Fatalf("elapsed=%s, want aggregate pacing", elapsed)
 	}
-	if result.TotalRequests != 10 || result.Errors != 0 || result.Latency.Samples != 10 {
+	if result.TotalRequests != 10 || result.Errors != 0 || result.Latency.Samples != 10 ||
+		result.ScheduleDelay.Samples != 10 || result.RoundTrip.Samples != 10 {
 		t.Fatalf("result=%+v", result)
+	}
+	if result.Latency.P99 < result.ScheduleDelay.P99 || result.Latency.P99 < result.RoundTrip.P99 {
+		t.Fatalf("latency components are inconsistent: result=%+v", result)
 	}
 }
 

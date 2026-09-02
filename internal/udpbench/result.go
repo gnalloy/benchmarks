@@ -11,6 +11,8 @@ type Result struct {
 	Elapsed       time.Duration
 	Throughput    float64
 	Latency       Latency
+	ScheduleDelay Latency
+	RoundTrip     Latency
 }
 
 type Latency struct {

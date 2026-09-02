@@ -34,7 +34,7 @@ func Run(parent context.Context, cfg Config) (Result, error) {
 		return Result{Errors: 1}, err
 	}
 
-	samples := make([][]int64, cfg.Connections)
+	samples := make([]clientSamples, cfg.Connections)
 	if cfg.LatencySampleRate == 0 {
 		samples = nil
 	}
@@ -50,11 +50,9 @@ func Run(parent context.Context, cfg Config) (Result, error) {
 		Throughput:    float64(total) / elapsed.Seconds(),
 	}
 	if samples != nil {
-		all := make([]int64, 0, sampleCapacity(cfg.Connections*cfg.Messages, cfg.LatencySampleRate))
-		for _, values := range samples {
-			all = append(all, values...)
-		}
-		result.Latency = summarizeLatency(all)
+		result.Latency = summarizeClientSamples(samples, func(sample clientSamples) []int64 { return sample.total })
+		result.ScheduleDelay = summarizeClientSamples(samples, func(sample clientSamples) []int64 { return sample.scheduleDelay })
+		result.RoundTrip = summarizeClientSamples(samples, func(sample clientSamples) []int64 { return sample.roundTrip })
 	}
 	if err != nil {
 		result.Errors = 1
@@ -96,7 +94,13 @@ type clientResult struct {
 	err       error
 }
 
-func runPhase(ctx context.Context, clients []client, cfg Config, messages int, samples [][]int64) (int64, error) {
+type clientSamples struct {
+	total         []int64
+	scheduleDelay []int64
+	roundTrip     []int64
+}
+
+func runPhase(ctx context.Context, clients []client, cfg Config, messages int, samples []clientSamples) (int64, error) {
 	if messages == 0 {
 		return 0, nil
 	}
@@ -106,16 +110,21 @@ func runPhase(ctx context.Context, clients []client, cfg Config, messages int, s
 	pacer := newPhasePacer(time.Time{}, len(clients), cfg.TargetRate)
 	for id := range clients {
 		id := id
-		wait.Add(1)
-		go func() {
-			defer wait.Done()
-			var clientSamples *[]int64
-			if samples != nil {
-				samples[id] = make([]int64, 0, sampleCapacity(messages, cfg.LatencySampleRate))
-				clientSamples = &samples[id]
+		var measured *clientSamples
+		if samples != nil {
+			capacity := sampleCapacity(messages, cfg.LatencySampleRate)
+			samples[id].total = make([]int64, 0, capacity)
+			samples[id].roundTrip = make([]int64, 0, capacity)
+			if cfg.TargetRate > 0 {
+				samples[id].scheduleDelay = make([]int64, 0, capacity)
 			}
-			results[id].completed, results[id].err = runClient(ctx, clients[id], id, messages, cfg.LatencySampleRate, start, &pacer, clientSamples)
-		}()
+			measured = &samples[id]
+		}
+		wait.Add(1)
+		go func(measured *clientSamples) {
+			defer wait.Done()
+			results[id].completed, results[id].err = runClient(ctx, clients[id], id, messages, cfg.LatencySampleRate, start, &pacer, measured)
+		}(measured)
 	}
 	pacer.start = time.Now()
 	close(start)
@@ -130,7 +139,7 @@ func runPhase(ctx context.Context, clients []client, cfg Config, messages int, s
 	return total, nil
 }
 
-func runClient(ctx context.Context, client client, id int, messages int, sampleRate int, start <-chan struct{}, pacer *phasePacer, samples *[]int64) (int64, error) {
+func runClient(ctx context.Context, client client, id int, messages int, sampleRate int, start <-chan struct{}, pacer *phasePacer, samples *clientSamples) (int64, error) {
 	select {
 	case <-start:
 	case <-ctx.Done():
@@ -142,7 +151,7 @@ func runClient(ctx context.Context, client client, id int, messages int, sampleR
 	return runSaturatedClient(ctx, client, id, messages, sampleRate, samples)
 }
 
-func runSaturatedClient(ctx context.Context, client client, id int, messages int, sampleRate int, samples *[]int64) (int64, error) {
+func runSaturatedClient(ctx context.Context, client client, id int, messages int, sampleRate int, samples *clientSamples) (int64, error) {
 	var completed int64
 	for index := 0; index < messages; index++ {
 		if err := ctx.Err(); err != nil {
@@ -169,14 +178,15 @@ func runSaturatedClient(ctx context.Context, client client, id int, messages int
 			if elapsed <= 0 {
 				elapsed = 1
 			}
-			*samples = append(*samples, elapsed)
+			samples.total = append(samples.total, elapsed)
+			samples.roundTrip = append(samples.roundTrip, elapsed)
 		}
 		completed++
 	}
 	return completed, nil
 }
 
-func runPacedClient(ctx context.Context, client client, id int, messages int, sampleRate int, pacer *phasePacer, samples *[]int64) (int64, error) {
+func runPacedClient(ctx context.Context, client client, id int, messages int, sampleRate int, pacer *phasePacer, samples *clientSamples) (int64, error) {
 	timer := time.NewTimer(time.Hour)
 	if !timer.Stop() {
 		<-timer.C
@@ -193,6 +203,10 @@ func runPacedClient(ctx context.Context, client client, id int, messages int, sa
 			return completed, err
 		}
 		record := samples != nil && sampleRate > 0 && index%sampleRate == 0
+		var sendStarted time.Time
+		if record {
+			sendStarted = time.Now()
+		}
 		if err := writeFull(client.conn, client.payload); err != nil {
 			return completed, err
 		}
@@ -204,15 +218,43 @@ func runPacedClient(ctx context.Context, client client, id int, messages int, sa
 			return completed, fmt.Errorf("udpbench: echo mismatch")
 		}
 		if record {
-			elapsed := time.Since(deadline).Nanoseconds()
-			if elapsed <= 0 {
-				elapsed = 1
-			}
-			*samples = append(*samples, elapsed)
+			completedAt := time.Now()
+			total := positiveNanoseconds(completedAt.Sub(deadline))
+			scheduleDelay := nonNegativeNanoseconds(sendStarted.Sub(deadline))
+			roundTrip := positiveNanoseconds(completedAt.Sub(sendStarted))
+			samples.total = append(samples.total, total)
+			samples.scheduleDelay = append(samples.scheduleDelay, scheduleDelay)
+			samples.roundTrip = append(samples.roundTrip, roundTrip)
 		}
 		completed++
 	}
 	return completed, nil
+}
+
+func summarizeClientSamples(samples []clientSamples, values func(clientSamples) []int64) Latency {
+	total := 0
+	for _, sample := range samples {
+		total += len(values(sample))
+	}
+	all := make([]int64, 0, total)
+	for _, sample := range samples {
+		all = append(all, values(sample)...)
+	}
+	return summarizeLatency(all)
+}
+
+func positiveNanoseconds(value time.Duration) int64 {
+	if value <= 0 {
+		return 1
+	}
+	return value.Nanoseconds()
+}
+
+func nonNegativeNanoseconds(value time.Duration) int64 {
+	if value <= 0 {
+		return 0
+	}
+	return value.Nanoseconds()
 }
 
 func writeFull(writer io.Writer, payload []byte) error {

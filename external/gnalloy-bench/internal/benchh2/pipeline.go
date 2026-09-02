@@ -57,6 +57,9 @@ func addClientPipeline(ch channel.Channel, cfg Config, response *responseHandler
 	if err := pipeline.AddLast("http2-settings-ack", http2.NewSettingsAckHandler()); err != nil {
 		return err
 	}
+	if err := pipeline.AddLast("http2-ping-ack", http2.NewPingAckHandler()); err != nil {
+		return err
+	}
 	if err := pipeline.AddLast("http2-multiplexer", multiplexer); err != nil {
 		return err
 	}

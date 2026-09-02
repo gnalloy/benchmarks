@@ -101,6 +101,12 @@ func addHTTP2Pipeline(ch channel.Channel, cfg config) error {
 	if err := pipeline.AddLast("http2-header-encoder", headerEncoder); err != nil {
 		return err
 	}
+	if err := pipeline.AddLast("http2-settings-ack", http2.NewSettingsAckHandler()); err != nil {
+		return err
+	}
+	if err := pipeline.AddLast("http2-ping-ack", http2.NewPingAckHandler()); err != nil {
+		return err
+	}
 	if err := pipeline.AddLast("http2-mux", mux); err != nil {
 		return err
 	}
@@ -134,19 +140,6 @@ func (h http2BenchmarkHandler) ChannelActive(ctx *channel.HandlerContext) {
 
 func (h http2BenchmarkHandler) ChannelRead(ctx *channel.HandlerContext, msg any) {
 	switch frame := msg.(type) {
-	case http2.SettingsFrame:
-		if !frame.Ack {
-			if err := ctx.WriteAndFlush(http2.SettingsFrame{Ack: true}); err != nil {
-				ctx.FireExceptionCaught(err)
-			}
-		}
-	case http2.PingFrame:
-		if !frame.Ack {
-			frame.Ack = true
-			if err := ctx.WriteAndFlush(frame); err != nil {
-				ctx.FireExceptionCaught(err)
-			}
-		}
 	case http2.StreamEvent:
 		defer frame.Release()
 		if frame.Type != http2.StreamEventRead {

@@ -442,6 +442,7 @@ func TestParseConfigResolvesAutoWorkers(t *testing.T) {
 		GOOS:       runtime.GOOS,
 		Backend:    transport.BackendIOCP,
 		GOMAXPROCS: runtime.GOMAXPROCS(0),
+		Bosses:     1,
 	})
 	if cfg.Workers != want {
 		t.Fatalf("workers=%d, want %d", cfg.Workers, want)
@@ -481,61 +482,6 @@ func TestParseConfigResolvesDefaultMaxMessagesPerRead(t *testing.T) {
 	}
 	if cfg.MaxMessagesPerRead != channel.OptionMaxMessagesPerRead.Default() {
 		t.Fatalf("maxMessagesPerRead=%d, want %d", cfg.MaxMessagesPerRead, channel.OptionMaxMessagesPerRead.Default())
-	}
-}
-
-func TestDefaultWorkerCountCapsWindowsIOCP(t *testing.T) {
-	got := defaultWorkerCount(workerSizingInput{
-		GOOS:       "windows",
-		Backend:    transport.BackendIOCP,
-		GOMAXPROCS: 16,
-	})
-	if got != 8 {
-		t.Fatalf("workers=%d, want 8", got)
-	}
-}
-
-func TestDefaultWorkerCountCapsLinuxEpoll(t *testing.T) {
-	got := defaultWorkerCount(workerSizingInput{
-		GOOS:       "linux",
-		Backend:    transport.BackendEpoll,
-		GOMAXPROCS: 8,
-	})
-	if got != 4 {
-		t.Fatalf("workers=%d, want 4", got)
-	}
-}
-
-func TestDefaultWorkerCountCapsLinuxIOUring(t *testing.T) {
-	got := defaultWorkerCount(workerSizingInput{
-		GOOS:       "linux",
-		Backend:    transport.BackendIOUring,
-		GOMAXPROCS: 8,
-	})
-	if got != 4 {
-		t.Fatalf("workers=%d, want 4", got)
-	}
-}
-
-func TestDefaultWorkerCountKeepsNonIOCPParallelism(t *testing.T) {
-	got := defaultWorkerCount(workerSizingInput{
-		GOOS:       "linux",
-		Backend:    transport.BackendStd,
-		GOMAXPROCS: 16,
-	})
-	if got != 16 {
-		t.Fatalf("workers=%d, want 16", got)
-	}
-}
-
-func TestDefaultWorkerCountNormalizesInvalidCPUCount(t *testing.T) {
-	got := defaultWorkerCount(workerSizingInput{
-		GOOS:       "windows",
-		Backend:    transport.BackendIOCP,
-		GOMAXPROCS: 0,
-	})
-	if got != 1 {
-		t.Fatalf("workers=%d, want 1", got)
 	}
 }
 

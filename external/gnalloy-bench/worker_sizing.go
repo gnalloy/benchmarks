@@ -11,10 +11,11 @@ type workerSizingInput struct {
 	GOOS       string
 	Backend    transport.BackendKind
 	GOMAXPROCS int
+	Bosses     int
 }
 
 func defaultWorkerCount(input workerSizingInput) int {
-	workers := normalizeWorkerCPUCount(input.GOMAXPROCS)
+	workers := availableWorkerBudget(input.GOMAXPROCS, input.Bosses)
 	if input.GOOS == "linux" && isLinuxNativePoller(input.Backend) && workers > linuxNativePollerAutoWorkerLimit {
 		return linuxNativePollerAutoWorkerLimit
 	}
@@ -24,13 +25,20 @@ func defaultWorkerCount(input workerSizingInput) int {
 	return workers
 }
 
-func isLinuxNativePoller(backend transport.BackendKind) bool {
-	return backend == transport.BackendEpoll || backend == transport.BackendIOUring
-}
-
-func normalizeWorkerCPUCount(cpus int) int {
-	if cpus <= 0 {
+func availableWorkerBudget(gomaxprocs int, bosses int) int {
+	if gomaxprocs <= 0 {
+		gomaxprocs = 1
+	}
+	if bosses < 0 {
+		bosses = 0
+	}
+	workers := gomaxprocs - bosses
+	if workers <= 0 {
 		return 1
 	}
-	return cpus
+	return workers
+}
+
+func isLinuxNativePoller(backend transport.BackendKind) bool {
+	return backend == transport.BackendEpoll || backend == transport.BackendIOUring
 }

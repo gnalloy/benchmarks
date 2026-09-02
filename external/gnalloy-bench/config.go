@@ -150,6 +150,7 @@ func (c *config) resolve() error {
 			GOOS:       runtime.GOOS,
 			Backend:    c.Backend,
 			GOMAXPROCS: runtime.GOMAXPROCS(0),
+			Bosses:     c.Boss,
 		})
 	}
 	if c.ReadBufferSize == 0 {
@@ -204,6 +205,9 @@ func (c config) validate() error {
 	}
 	if c.Boss <= 0 || c.Workers <= 0 {
 		return fmt.Errorf("%w: boss and workers must be positive", errInvalidConfig)
+	}
+	if err := validateEventLoopTopology(c.Boss, c.Workers, runtime.GOMAXPROCS(0), c.BossCPUSet, c.WorkerCPUSet); err != nil {
+		return err
 	}
 	if c.ReadBufferSize <= 0 {
 		return fmt.Errorf("%w: read-buffer-size must be positive", errInvalidConfig)

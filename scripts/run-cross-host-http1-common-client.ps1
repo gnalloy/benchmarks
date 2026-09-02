@@ -45,7 +45,7 @@ param(
     [ValidateRange(1, 64)]
     [int]$EventLoops = 4,
     [ValidateRange(1, 64)]
-    [int]$GnalloyWorkers = 4,
+    [int]$GnalloyWorkers = 3,
     [ValidateRange(1, [int]::MaxValue)]
     [int]$GnalloyReadBufferSize = 4096,
     [ValidateRange(1, [int]::MaxValue)]
@@ -53,9 +53,9 @@ param(
     [ValidateRange(0, [int]::MaxValue)]
     [int]$GnalloyEventBatchSize = 0,
     [ValidateSet("immediate", "read-complete", "event-loop-batch")]
-    [string]$GnalloyFlushStrategy = "read-complete",
+    [string]$GnalloyFlushStrategy = "event-loop-batch",
     [string]$GnalloyBossCPUSet = "3",
-    [string]$GnalloyWorkerCPUSet = "0,1,2,3",
+    [string]$GnalloyWorkerCPUSet = "0,1,2",
     [switch]$CaptureCPUProfile,
     [switch]$CaptureAllocProfile,
     [switch]$CaptureRuntimeTrace,

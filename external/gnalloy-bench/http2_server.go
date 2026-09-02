@@ -4,7 +4,7 @@ import (
 	"context"
 	"strconv"
 
-	"gnalloy.org/benchmarks/external/internal/benchh2"
+	"gnalloy.org/benchmarks/external/gnalloy-bench/internal/benchh2"
 	"gnalloy.org/codec-http2"
 	"gnalloy.org/gnalloy/bootstrap"
 	"gnalloy.org/gnalloy/buffer"

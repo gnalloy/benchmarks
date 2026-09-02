@@ -41,7 +41,6 @@ It does not absorb neighboring module responsibilities. Core primitives stay in 
 - `gnalloy.org/benchmarks/benchdiff` (`benchdiff`)
 - `gnalloy.org/benchmarks/cmd/gnalloy-benchdiff` (`main`)
 - `gnalloy.org/benchmarks/cmd/gnalloy-parity` (`main`)
-- `gnalloy.org/benchmarks/external/internal/benchh2` (`benchh2`)
 - `gnalloy.org/benchmarks/external/internal/benchh3` (`benchh3`)
 - `gnalloy.org/benchmarks/external/internal/benchtls` (`benchtls`)
 - `gnalloy.org/benchmarks/microbench` (`microbench`)

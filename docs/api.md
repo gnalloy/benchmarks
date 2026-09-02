@@ -32,18 +32,6 @@ Package name: `main`
 (no exported API reported by go doc)
 ```
 
-### `gnalloy.org/benchmarks/external/internal/benchh2`
-
-Package name: `benchh2`
-
-```text
-func ResponseBody(size int) []byte
-type Config struct{ ... }
-type LatencySummary struct{ ... }
-type Result struct{ ... }
-    func RunLoad(parent context.Context, cfg Config) (Result, error)
-```
-
 ### `gnalloy.org/benchmarks/external/internal/benchh3`
 
 Package name: `benchh3`

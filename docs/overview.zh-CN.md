@@ -18,7 +18,6 @@ Gnalloy 模块化网络栈的基准、性能对标与压测工具。
 ## 包结构
 - `gnalloy.org/benchmarks/benchdiff`（`benchdiff`）
 - `gnalloy.org/benchmarks/cmd/gnalloy-benchdiff`（`main`）
-- `gnalloy.org/benchmarks/external/internal/benchh2`（`benchh2`）
 - `gnalloy.org/benchmarks/external/internal/benchh3`（`benchh3`）
 - `gnalloy.org/benchmarks/external/internal/benchtls`（`benchtls`）
 - `gnalloy.org/benchmarks/microbench`（`microbench`）

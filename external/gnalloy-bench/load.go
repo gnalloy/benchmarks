@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gnalloy.org/benchmarks/external/internal/benchh2"
+	"gnalloy.org/benchmarks/external/gnalloy-bench/internal/benchh2"
 	"gnalloy.org/benchmarks/external/internal/benchh3"
 	"gnalloy.org/benchmarks/internal/httpbench"
 )

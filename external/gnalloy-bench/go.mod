@@ -13,6 +13,7 @@ require (
 	gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b
 	gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3
 	gnalloy.org/transport-udp v0.0.0-20260902120030-2fd09e2bbc01
+	golang.org/x/net v0.58.0
 )
 
 require (
@@ -21,6 +22,6 @@ require (
 	gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98 // indirect
 	gnalloy.org/transport-zerocopy v0.0.0-20260831155854-78135ae02cc4 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
-	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 )

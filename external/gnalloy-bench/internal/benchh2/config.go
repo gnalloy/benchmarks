@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const maxClientStreamCount = 1<<30 - 1
+
 // Config 描述 HTTP/2 prior-knowledge 或 TLS ALPN 负载。
 type Config struct {
 	Addr              string

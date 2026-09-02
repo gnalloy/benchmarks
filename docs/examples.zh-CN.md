@@ -16,7 +16,6 @@ go doc gnalloy.org/benchmarks
 当前源码树暴露这些 package 导入路径：
 - `gnalloy.org/benchmarks/benchdiff`
 - `gnalloy.org/benchmarks/cmd/gnalloy-benchdiff`
-- `gnalloy.org/benchmarks/external/internal/benchh2`
 - `gnalloy.org/benchmarks/external/internal/benchh3`
 - `gnalloy.org/benchmarks/external/internal/benchtls`
 - `gnalloy.org/benchmarks/microbench`
@@ -27,7 +26,6 @@ go doc gnalloy.org/benchmarks
 ```bash
 go doc gnalloy.org/benchmarks/benchdiff
 go doc gnalloy.org/benchmarks/cmd/gnalloy-benchdiff
-go doc gnalloy.org/benchmarks/external/internal/benchh2
 go doc gnalloy.org/benchmarks/external/internal/benchh3
 go doc gnalloy.org/benchmarks/external/internal/benchtls
 go doc gnalloy.org/benchmarks/microbench

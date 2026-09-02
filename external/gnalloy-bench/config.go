@@ -258,8 +258,8 @@ func (c config) validate() error {
 	if c.HTTP1Mode != defaultHTTP1Mode && c.Protocol != "http1" && c.Protocol != "https1" {
 		return fmt.Errorf("%w: http1-mode requires HTTP/1 protocol", errInvalidConfig)
 	}
-	if c.ServerOnly && c.Protocol != "udp-echo" {
-		return fmt.Errorf("%w: server-only currently requires udp-echo protocol", errInvalidConfig)
+	if c.ServerOnly && c.Protocol != "udp-echo" && c.Protocol != "http1" {
+		return fmt.Errorf("%w: server-only requires udp-echo or http1 protocol", errInvalidConfig)
 	}
 	if c.Protocol == "http3" {
 		return ensureHTTP3Config(c)

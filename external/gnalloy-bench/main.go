@@ -37,7 +37,7 @@ func runCLI(args []string, stdout io.Writer) error {
 	}
 	defer stopTrace()
 	if cfg.ServerOnly {
-		return runUDPServerOnly(context.Background(), cfg, stdout)
+		return runServerOnly(context.Background(), cfg, stdout)
 	}
 	result, err := runBenchmark(context.Background(), cfg)
 	if result.TotalRequests > 0 {
@@ -46,13 +46,29 @@ func runCLI(args []string, stdout io.Writer) error {
 	return err
 }
 
-func runUDPServerOnly(ctx context.Context, cfg config, stdout io.Writer) error {
-	server, err := startUDPEchoServer(ctx, cfg)
-	if err != nil {
-		return err
+func runServerOnly(ctx context.Context, cfg config, stdout io.Writer) error {
+	switch cfg.Protocol {
+	case "udp-echo":
+		server, err := startUDPEchoServer(ctx, cfg)
+		if err != nil {
+			return err
+		}
+		defer server.stop()
+		return waitForServerStop(ctx, stdout, cfg, server.addr)
+	case "http1":
+		server, err := startHTTP1Server(ctx, cfg)
+		if err != nil {
+			return err
+		}
+		defer server.stop()
+		return waitForServerStop(ctx, stdout, cfg, server.addr)
+	default:
+		return fmt.Errorf("%w: server-only does not support %s", errInvalidConfig, cfg.Protocol)
 	}
-	defer server.stop()
-	if err := servermode.WriteReady(stdout, servermode.Info{Framework: "gnalloy", Protocol: cfg.Protocol, Addr: server.addr}); err != nil {
+}
+
+func waitForServerStop(ctx context.Context, stdout io.Writer, cfg config, addr string) error {
+	if err := servermode.WriteReady(stdout, servermode.Info{Framework: "gnalloy", Protocol: cfg.Protocol, Addr: addr}); err != nil {
 		return err
 	}
 	servermode.Wait(ctx)

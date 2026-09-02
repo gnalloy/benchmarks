@@ -64,6 +64,23 @@ func TestParseConfigRejectsNegativeWarmupMessages(t *testing.T) {
 	}
 }
 
+func TestParseConfigSupportsHTTP1ServerOnly(t *testing.T) {
+	cfg, err := parseConfig([]string{"-protocol", "http1", "-server-only=true"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.ServerOnly {
+		t.Fatal("server-only=false, want true")
+	}
+}
+
+func TestParseConfigRejectsServerOnlyForTCPEcho(t *testing.T) {
+	_, err := parseConfig([]string{"-protocol", "tcp-echo", "-server-only=true"})
+	if !errors.Is(err, errInvalidConfig) {
+		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
+	}
+}
+
 func TestWriteBenchmarkResult(t *testing.T) {
 	var out bytes.Buffer
 	writeBenchmarkResult(&out, config{Protocol: "tcp-echo", Payload: 8, Connections: 1, Messages: 2, LatencySampleRate: 2, WarmupMessages: 3}, benchResult{

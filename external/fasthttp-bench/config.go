@@ -27,6 +27,7 @@ type config struct {
 	ALPN              string
 	CipherSuites      string
 	CipherSuiteIDs    []uint16
+	ServerOnly        bool
 }
 
 func parseConfig(args []string) (config, error) {
@@ -53,6 +54,7 @@ func parseConfig(args []string) (config, error) {
 	fs.StringVar(&cfg.TLSVersion, "tls-version", cfg.TLSVersion, "TLS protocol version: 1.1, 1.2 or 1.3")
 	fs.StringVar(&cfg.ALPN, "alpn", cfg.ALPN, "comma-separated TLS ALPN protocols")
 	fs.StringVar(&cfg.CipherSuites, "cipher-suites", cfg.CipherSuites, "comma-separated TLS cipher suites")
+	fs.BoolVar(&cfg.ServerOnly, "server-only", cfg.ServerOnly, "run only the benchmark server")
 	if err := fs.Parse(args); err != nil {
 		return config{}, err
 	}
@@ -100,6 +102,9 @@ func (c config) validate() error {
 	}
 	if c.Protocol == protocolHTTP1 && len(c.CipherSuiteIDs) > 0 {
 		return fmt.Errorf("%w: cipher suites require HTTPS", errInvalidConfig)
+	}
+	if c.ServerOnly && c.Protocol != protocolHTTP1 {
+		return fmt.Errorf("%w: server-only requires http1 protocol", errInvalidConfig)
 	}
 	return nil
 }

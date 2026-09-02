@@ -2,6 +2,7 @@ package dev.goark.gnalloy.benchmarks.netty;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class NettyEchoBenchmark {
     private NettyEchoBenchmark() {
@@ -50,11 +51,20 @@ public final class NettyEchoBenchmark {
     }
 
     private static void runServerOnly(Config config) throws Exception {
-        DatagramEchoServer server = DatagramEchoServer.start(config);
-        Thread shutdownHook = new Thread(() -> closeServer(server), "netty-bench-shutdown");
+        if (config.udpEcho()) {
+            DatagramEchoServer server = DatagramEchoServer.start(config);
+            awaitShutdown(config, server.address(), server);
+            return;
+        }
+        EchoServer server = EchoServer.start(config);
+        awaitShutdown(config, server.address(), server);
+    }
+
+    private static void awaitShutdown(Config config, InetSocketAddress address, AutoCloseable server) throws Exception {
+        AtomicBoolean closed = new AtomicBoolean();
+        Thread shutdownHook = new Thread(() -> closeServer(server, closed), "netty-bench-shutdown");
         Runtime.getRuntime().addShutdownHook(shutdownHook);
         try {
-            InetSocketAddress address = server.address();
             System.out.printf(
                     "serverReady=true framework=netty protocol=%s addr=%s:%d%n",
                     config.protocol(), address.getHostString(), address.getPort());
@@ -65,15 +75,20 @@ public final class NettyEchoBenchmark {
                 Runtime.getRuntime().removeShutdownHook(shutdownHook);
             } catch (IllegalStateException ignored) {
             }
-            server.close();
+            closeServer(server, closed);
         }
     }
 
-    private static void closeServer(DatagramEchoServer server) {
+    private static void closeServer(AutoCloseable server, AtomicBoolean closed) {
+        if (!closed.compareAndSet(false, true)) {
+            return;
+        }
         try {
             server.close();
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
+        } catch (Exception exception) {
+            throw new IllegalStateException("netty-bench: close server", exception);
         }
     }
 }

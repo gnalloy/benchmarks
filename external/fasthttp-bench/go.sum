@@ -10,3 +10,5 @@ github.com/xyproto/randomstring v1.0.5 h1:YtlWPoRdgMu3NZtP45drfy1GKoojuR7hmRcnhZ
 github.com/xyproto/randomstring v1.0.5/go.mod h1:rgmS5DeNXLivK7YprL0pY+lTuhNQW3iGxZ18UQApw/E=
 gnalloy.org/benchmarks v0.0.0-20260831160907-0c95b32a4503 h1:MyFco8xyOXqvIDDVqeUZoZLlkgpkugi9vDLDPjljQX8=
 gnalloy.org/benchmarks v0.0.0-20260831160907-0c95b32a4503/go.mod h1:uOkrf2xpe57ijQbXbr9BAZZaFTgStiAZoGrCJK5gBC4=
+gnalloy.org/benchmarks v0.0.0-20260902024039-c981ec5ad315 h1:xSDJvXtoJFyY5xSRfFkpvXplNIVS16deuIkOa507gE0=
+gnalloy.org/benchmarks v0.0.0-20260902024039-c981ec5ad315/go.mod h1:uOkrf2xpe57ijQbXbr9BAZZaFTgStiAZoGrCJK5gBC4=

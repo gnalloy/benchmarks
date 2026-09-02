@@ -100,8 +100,8 @@ record Config(
         if (!tlsEnabled() && !cipherSuiteList().isEmpty()) {
             throw new IllegalArgumentException("netty-bench: cipher-suites require TLS");
         }
-        if (serverOnly && !udpEcho()) {
-            throw new IllegalArgumentException("netty-bench: server-only currently requires udp-echo protocol");
+        if (serverOnly && !udpEcho() && !Objects.equals(protocol, "http1")) {
+            throw new IllegalArgumentException("netty-bench: server-only requires udp-echo or http1 protocol");
         }
         if (http3Family() && !cipherSuiteList().isEmpty()) {
             throw new IllegalArgumentException("netty-bench: HTTP/3 cipher suites are provider-managed");

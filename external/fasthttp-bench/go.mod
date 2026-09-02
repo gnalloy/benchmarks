@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/valyala/fasthttp v1.73.0
-	gnalloy.org/benchmarks v0.0.0-20260831160907-0c95b32a4503
+	gnalloy.org/benchmarks v0.0.0-20260902024039-c981ec5ad315
 )
 
 require (

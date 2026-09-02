@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"gnalloy.org/benchmarks/internal/servermode"
 )
 
 var (
@@ -28,6 +30,7 @@ type config struct {
 	WarmupMessages    int
 	CPUProfile        string
 	RuntimeTrace      string
+	ServerOnly        bool
 }
 
 type benchResult struct {
@@ -62,6 +65,9 @@ func runCLI(args []string, stdout io.Writer) error {
 		return err
 	}
 	defer stopTrace()
+	if cfg.ServerOnly {
+		return runServerOnly(context.Background(), cfg, stdout)
+	}
 	result, err := runBenchmark(context.Background(), cfg)
 	if result.TotalRequests > 0 {
 		writeBenchmarkResult(stdout, cfg, result)
@@ -90,6 +96,7 @@ func parseConfig(args []string) (config, error) {
 	fs.IntVar(&cfg.WarmupMessages, "warmup-messages", cfg.WarmupMessages, "messages per connection sent before timed measurement; 0 disables in-process warmup")
 	fs.StringVar(&cfg.CPUProfile, "cpuprofile", cfg.CPUProfile, "write Go CPU profile to this file")
 	fs.StringVar(&cfg.RuntimeTrace, "trace", cfg.RuntimeTrace, "write Go runtime trace to this file")
+	fs.BoolVar(&cfg.ServerOnly, "server-only", cfg.ServerOnly, "run only the benchmark server")
 	if err := fs.Parse(args); err != nil {
 		return config{}, err
 	}
@@ -117,6 +124,22 @@ func (c config) validate() error {
 	if c.WarmupMessages < 0 {
 		return fmt.Errorf("%w: warmup-messages must not be negative", errInvalidConfig)
 	}
+	if c.ServerOnly && c.Protocol != "http1" {
+		return fmt.Errorf("%w: server-only requires http1 protocol", errInvalidConfig)
+	}
+	return nil
+}
+
+func runServerOnly(ctx context.Context, cfg config, stdout io.Writer) error {
+	server, err := startEchoServer(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	defer server.stop()
+	if err := servermode.WriteReady(stdout, servermode.Info{Framework: "netpoll", Protocol: cfg.Protocol, Addr: server.addr}); err != nil {
+		return err
+	}
+	servermode.Wait(ctx)
 	return nil
 }
 

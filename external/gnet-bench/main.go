@@ -56,7 +56,7 @@ func runCLI(args []string, stdout io.Writer) error {
 		return err
 	}
 	if cfg.ServerOnly {
-		return runUDPServerOnly(context.Background(), cfg, stdout)
+		return runServerOnly(context.Background(), cfg, stdout)
 	}
 	result, err := runBenchmark(context.Background(), cfg)
 	if result.TotalRequests > 0 {
@@ -118,13 +118,13 @@ func (c config) validate() error {
 	if c.WarmupMessages < 0 {
 		return fmt.Errorf("%w: warmup-messages must not be negative", errInvalidConfig)
 	}
-	if c.ServerOnly && c.Protocol != "udp-echo" {
-		return fmt.Errorf("%w: server-only currently requires udp-echo protocol", errInvalidConfig)
+	if c.ServerOnly && c.Protocol != "udp-echo" && c.Protocol != "http1" {
+		return fmt.Errorf("%w: server-only requires udp-echo or http1 protocol", errInvalidConfig)
 	}
 	return nil
 }
 
-func runUDPServerOnly(ctx context.Context, cfg config, stdout io.Writer) error {
+func runServerOnly(ctx context.Context, cfg config, stdout io.Writer) error {
 	server, err := startEchoServer(ctx, cfg)
 	if err != nil {
 		return err

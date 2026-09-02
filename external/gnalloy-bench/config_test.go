@@ -93,16 +93,13 @@ func TestParseConfigSupportsHTTPS1ALPN(t *testing.T) {
 	}
 }
 
-func TestParseConfigSupportsHTTP1RawMode(t *testing.T) {
-	cfg, err := parseConfig([]string{
+func TestParseConfigRejectsHTTP1BenchmarkBypass(t *testing.T) {
+	_, err := parseConfig([]string{
 		"-protocol", "http1",
 		"-http1-mode", "raw",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.HTTP1Mode != http1ModeRaw {
-		t.Fatalf("http1Mode=%q, want raw", cfg.HTTP1Mode)
+	if err == nil {
+		t.Fatal("expected removed http1-mode flag to be rejected")
 	}
 }
 
@@ -180,16 +177,6 @@ func TestParseConfigRejectsTCPEchoModeForHTTP1(t *testing.T) {
 	_, err := parseConfig([]string{
 		"-protocol", "http1",
 		"-tcp-echo-mode", tcpEchoModeReadComplete,
-	})
-	if !errors.Is(err, errInvalidConfig) {
-		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
-	}
-}
-
-func TestParseConfigRejectsHTTP1ModeForHTTP2(t *testing.T) {
-	_, err := parseConfig([]string{
-		"-protocol", "http2",
-		"-http1-mode", "raw",
 	})
 	if !errors.Is(err, errInvalidConfig) {
 		t.Fatalf("err=%v, want %v", err, errInvalidConfig)

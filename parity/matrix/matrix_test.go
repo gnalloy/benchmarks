@@ -55,6 +55,20 @@ func TestLinuxFullSpecCoversRequestedProtocolsAndFrameworks(t *testing.T) {
 	}
 }
 
+func TestFullSpecsDoNotUseHTTP1BenchmarkBypass(t *testing.T) {
+	for _, spec := range []parity.Spec{LinuxFullSpec(), WindowsFullSpec()} {
+		for _, scenario := range spec.Scenarios {
+			if scenario.Framework != frameworkGnalloy {
+				continue
+			}
+			command := strings.Join(scenario.Command, " ")
+			if strings.Contains(command, "-http1-mode") {
+				t.Fatalf("scenario %q uses removed HTTP/1 benchmark bypass: %q", scenario.Name, command)
+			}
+		}
+	}
+}
+
 func TestLinuxFullSpecRejectsIllegalTLSCombinationsBySkipping(t *testing.T) {
 	spec := LinuxFullSpec()
 	for _, scenario := range spec.Scenarios {

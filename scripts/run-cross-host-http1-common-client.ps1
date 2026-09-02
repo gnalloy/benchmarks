@@ -39,8 +39,6 @@ param(
     [int]$EventLoops = 4,
     [ValidateRange(1, 64)]
     [int]$GnalloyWorkers = 4,
-    [ValidateSet("codec", "raw")]
-    [string]$GnalloyHTTP1Mode = "codec",
     [string]$GnalloyBossCPUSet = "4",
     [string]$GnalloyWorkerCPUSet = "0,1,4,5",
     [switch]$CaptureCPUProfile,
@@ -189,7 +187,7 @@ function Start-RemoteServer {
     $command = @'
 cd '__REMOTE_REPO__'
 : >'__REMOTE_LOG__'
-nohup env SERVER_ADDR='__BIND_ADDR__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_HTTP1_MODE='__HTTP1_MODE__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' GNET_BENCH='__REMOTE_REPO__/external/bin/gnet-bench' NETPOLL_BENCH='__REMOTE_REPO__/external/bin/netpoll-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
+nohup env SERVER_ADDR='__BIND_ADDR__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' GNET_BENCH='__REMOTE_REPO__/external/bin/gnet-bench' NETPOLL_BENCH='__REMOTE_REPO__/external/bin/netpoll-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
 '@
     $command = $command.Replace("__REMOTE_REPO__", $ServerRepo).
         Replace("__REMOTE_LOG__", $remoteLog).
@@ -199,7 +197,6 @@ nohup env SERVER_ADDR='__BIND_ADDR__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SE
         Replace("__SERVER_GOMAXPROCS__", $ServerGoMaxProcs.ToString()).
         Replace("__EVENT_LOOPS__", $EventLoops.ToString()).
         Replace("__GNALLOY_WORKERS__", $GnalloyWorkers.ToString()).
-        Replace("__HTTP1_MODE__", $GnalloyHTTP1Mode).
         Replace("__BOSS_CPUS__", $GnalloyBossCPUSet).
         Replace("__WORKER_CPUS__", $GnalloyWorkerCPUSet).
         Replace("__CPU_PROFILE__", $CPUProfile).
@@ -233,7 +230,7 @@ function Get-ProfilePaths {
         return $paths
     }
     $mode = if ($TargetRate -gt 0) { "offered-$TargetRate" } else { "saturation" }
-    $baseName = "http1-gnalloy-$mode-p$Payload-r$Run-$GnalloyHTTP1Mode"
+    $baseName = "http1-gnalloy-$mode-p$Payload-r$Run-codec"
     if ($CaptureCPUProfile) {
         $paths.CPUProfile = "$remoteProfileDirectory/$baseName.cpu.pprof"
     }
@@ -328,7 +325,7 @@ try {
         "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
         "crossHost=true clientHost=$ClientHost clientAddress=$ClientAddress serverHost=$ServerHost serverAddress=$TargetAddress",
         "connections=$Connections messages=$Messages warmupMessages=$WarmupMessages targetRate=$TargetRate latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds frameworks=$($Frameworks -join ',')",
-        "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyHTTP1Mode=$GnalloyHTTP1Mode performanceGovernor=$SetPerformanceGovernor"
+        "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyHTTP1Pipeline=tcp+channel+codec/http1+handler performanceGovernor=$SetPerformanceGovernor"
     ) -Encoding utf8
     $serverMetadataCommand = @'
 printf 'serverHostname=%s\n' "$(hostname)"

@@ -354,7 +354,7 @@ func gnalloyCommand(backend string, protocol string, size payload, tls *tlsOptio
 		command = append(command, "-backend", backend)
 	}
 	if protocol == protocolHTTP1 || protocol == protocolHTTPS1 {
-		command = append(command, "-http1-mode", "raw", "-read-buffer-size", "${GNALLOY_HTTP1_READ_BUFFER}")
+		command = append(command, "-read-buffer-size", "${GNALLOY_HTTP1_READ_BUFFER}")
 	}
 	command = appendBaseFlags(command, size, "-")
 	command = appendTLSFlags(command, tls, "-")

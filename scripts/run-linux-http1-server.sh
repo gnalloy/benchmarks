@@ -11,7 +11,6 @@ SERVER_CPU_SET="${SERVER_CPU_SET:-0,1,4,5}"
 SERVER_GOMAXPROCS="${SERVER_GOMAXPROCS:-4}"
 EVENT_LOOPS="${EVENT_LOOPS:-4}"
 GNALLOY_WORKERS="${GNALLOY_WORKERS:-4}"
-GNALLOY_HTTP1_MODE="${GNALLOY_HTTP1_MODE:-codec}"
 GNALLOY_BOSS_CPU_SET="${GNALLOY_BOSS_CPU_SET:-4}"
 GNALLOY_WORKER_CPU_SET="${GNALLOY_WORKER_CPU_SET:-0,1,4,5}"
 GNALLOY_CPU_PROFILE="${GNALLOY_CPU_PROFILE:-}"
@@ -77,10 +76,6 @@ require_positive_integer PAYLOAD "${PAYLOAD}"
 require_positive_integer SERVER_GOMAXPROCS "${SERVER_GOMAXPROCS}"
 require_positive_integer EVENT_LOOPS "${EVENT_LOOPS}"
 require_positive_integer GNALLOY_WORKERS "${GNALLOY_WORKERS}"
-if [[ "${GNALLOY_HTTP1_MODE}" != "codec" && "${GNALLOY_HTTP1_MODE}" != "raw" ]]; then
-  printf 'GNALLOY_HTTP1_MODE must be codec or raw: %s\n' "${GNALLOY_HTTP1_MODE}" >&2
-  exit 1
-fi
 if [[ ! "${NICE_LEVEL}" =~ ^-?[0-9]+$ ]] || ((NICE_LEVEL < -20 || NICE_LEVEL > 19)); then
   printf 'NICE_LEVEL must be between -20 and 19: %s\n' "${NICE_LEVEL}" >&2
   exit 1
@@ -105,7 +100,7 @@ case "${FRAMEWORK}" in
     fi
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${GNALLOY_BENCH}" \
       -protocol http1 -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -backend epoll -boss 1 \
-      -workers "${GNALLOY_WORKERS}" -http1-mode "${GNALLOY_HTTP1_MODE}" -boss-cpus "${GNALLOY_BOSS_CPU_SET}" \
+      -workers "${GNALLOY_WORKERS}" -boss-cpus "${GNALLOY_BOSS_CPU_SET}" \
       -worker-cpus "${GNALLOY_WORKER_CPU_SET}" -reuseport=true -timeout 5m "${profile_args[@]}"
     ;;
   gnet)

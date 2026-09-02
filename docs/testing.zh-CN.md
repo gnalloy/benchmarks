@@ -64,7 +64,7 @@ GOWORK=off GOTOOLCHAIN=local go test ./... -run 'TestName' -count=1
 - `TestParseConfigKeepsMinimumAutoReadBufferSize`
 - `TestParseConfigRejectsCipherSuitesForTLS13`
 - `TestParseConfigRejectsFixedBuffersWithoutMmap`
-- `TestParseConfigRejectsHTTP1ModeForHTTP2`
+- `TestParseConfigRejectsHTTP1BenchmarkBypass`
 - `TestParseConfigRejectsHTTP2TLS11`
 - `TestParseConfigRejectsHTTP3TLS12`
 - `TestParseConfigRejectsInsecureCipherSuiteByDefault`

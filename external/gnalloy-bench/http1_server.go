@@ -50,9 +50,6 @@ func bindHTTP1Server(ctx context.Context, cfg config, boss *transport.EventLoopG
 					return err
 				}
 			}
-			if cfg.HTTP1Mode == http1ModeRaw {
-				return addHTTP1RawPipeline(ch, cfg)
-			}
 			return addHTTP1CodecPipeline(ch, cfg)
 		}).
 		BindContext(ctx, cfg.Addr)
@@ -82,10 +79,6 @@ func addHTTP1CodecPipeline(ch channel.Channel, cfg config) error {
 			"Content-Type": "application/octet-stream",
 		},
 	})
-}
-
-func addHTTP1RawPipeline(ch channel.Channel, cfg config) error {
-	return ch.Pipeline().AddLast("handler", newHTTP1RawHandler(cfg.Payload))
 }
 
 type http1Handler struct {

@@ -16,8 +16,8 @@ gnalloy.org/codec-http1 v0.0.0-20260831155325-667cf0239537 h1:VA1UHimrHonzOOpE4g
 gnalloy.org/codec-http1 v0.0.0-20260831155325-667cf0239537/go.mod h1:3P7UGfCb5nkrdaL7KTdRN5yf4LCZBxBXUjntNmD2Ww4=
 gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81 h1:F898MYKxFmbSkz+TQMV2dCASLfP41nVOo2G77IA8v1Y=
 gnalloy.org/codec-http3 v0.0.0-20260831155517-be03d6916f81/go.mod h1:92crEBwS/e4gpNyEIokXDmYi7tg1CJnhM3WI2gwsLsw=
-gnalloy.org/gnalloy v0.0.0-20260831153720-533bb39b2ad6 h1:YtIsp2u+paX8W0rCuIP71AUtjIC82OAXa0FVF8loNbk=
-gnalloy.org/gnalloy v0.0.0-20260831153720-533bb39b2ad6/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
+gnalloy.org/gnalloy v0.0.0-20260902012239-5357513937d5 h1:hwvJEvzoJSFAMUhvKv9B5FpdMB+QQ7/ilhMOxdp6RbI=
+gnalloy.org/gnalloy v0.0.0-20260902012239-5357513937d5/go.mod h1:Ahsh3ZG90dkm5gswMrAd+UYKeCXvFwY7pENPtNKJsuA=
 gnalloy.org/handler-tls v0.0.0-20260901014432-f6a2b3a7ac50 h1:NPbumg2oKkDB8cFN56j0+8DnTizPcNkkKl2eDmsVYcA=
 gnalloy.org/handler-tls v0.0.0-20260901014432-f6a2b3a7ac50/go.mod h1:KYkjLY+u83XcfJMvPE/bvTQIGAYodzsmcD1/iYDgYj0=
 gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f h1:5l35q8Bxsn+Xv022nJqF8GIoj3jU6xDKZplTu44VK2c=

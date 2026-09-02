@@ -61,6 +61,25 @@ func TestRunSaturatedAndPaced(t *testing.T) {
 	}
 }
 
+func TestRunConcurrentConnections(t *testing.T) {
+	listener := startTestServer(t, 16)
+	result, err := Run(context.Background(), Config{
+		Addr:              listener.Addr().String(),
+		Payload:           16,
+		Connections:       8,
+		Messages:          20,
+		WarmupMessages:    5,
+		LatencySampleRate: 1,
+		Timeout:           5 * time.Second,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TotalRequests != 160 || result.Errors != 0 || result.Latency.Samples != 160 {
+		t.Fatalf("result=%+v", result)
+	}
+}
+
 func TestRunTLSUsesALPN(t *testing.T) {
 	body := ResponseBody(16)
 	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {

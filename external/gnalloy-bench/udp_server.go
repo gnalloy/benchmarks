@@ -45,12 +45,18 @@ func bindUDPEchoServer(ctx context.Context, cfg config, boss *transport.EventLoo
 type udpEchoHandler struct{}
 
 func (udpEchoHandler) ChannelRead(ctx *channel.HandlerContext, msg any) {
-	datagram, ok := msg.(udp.Datagram)
-	if !ok {
+	switch datagram := msg.(type) {
+	case udp.Datagram:
+	case *udp.Datagram:
+		if datagram == nil {
+			ctx.FireChannelRead(msg)
+			return
+		}
+	default:
 		ctx.FireChannelRead(msg)
 		return
 	}
-	if err := ctx.WriteAndFlush(datagram); err != nil {
+	if err := ctx.WriteAndFlush(msg); err != nil {
 		ctx.FireExceptionCaught(err)
 	}
 }

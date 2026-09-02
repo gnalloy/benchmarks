@@ -341,9 +341,16 @@ printf 'serverHostname=%s\n' "$(hostname)"
 uname -srmo
 awk -F ': ' '/^model name/{print "serverCPU=" $2; exit}' /proc/cpuinfo
 printf 'serverGovernor=%s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || printf unknown)"
-sha256sum '__REMOTE_REPO__/external/bin/gnalloy-bench' '__REMOTE_REPO__/external/bin/gnet-bench' '__REMOTE_REPO__/external/bin/netty-bench.jar'
+__BINARY_HASHES__
 '@
-$remoteMetadata = Invoke-SSH -HostName $ServerHost -Command $metadataTemplate.Replace("__REMOTE_REPO__", $ServerRepo) -IgnoreStandardError
+$serverBinaryHashes = foreach ($framework in $Frameworks) {
+    switch ($framework) {
+        "gnalloy" { "sha256sum '$ServerRepo/external/bin/gnalloy-bench'" }
+        "gnet" { "sha256sum '$ServerRepo/external/bin/gnet-bench'" }
+        "netty" { "sha256sum '$ServerRepo/external/bin/netty-bench.jar'" }
+    }
+}
+$remoteMetadata = Invoke-SSH -HostName $ServerHost -Command $metadataTemplate.Replace("__BINARY_HASHES__", $serverBinaryHashes -join "`n") -IgnoreStandardError
 Add-Content -LiteralPath $Output -Value $remoteMetadata -Encoding utf8
 $clientMetadataTemplate = @'
 printf 'clientHostname=%s\n' "$(hostname)"

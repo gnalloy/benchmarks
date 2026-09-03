@@ -20,6 +20,7 @@ param(
     [int]$LatencySampleRate = 64,
     [int]$Repetitions = 5,
     [int]$CooldownSeconds = 5,
+    [bool]$SetPerformanceGovernor = $true,
     [ValidateSet("gnalloy", "hertz", "netty", "gnet", "netpoll", "fasthttp")]
     [string[]]$Frameworks = @("gnalloy", "hertz", "netty", "gnet", "netpoll", "fasthttp"),
     [string]$GnalloyBench = "/opt/test/gnalloy/http2-server-20260903/gnalloy-bench",
@@ -88,6 +89,36 @@ if test -r '__PID_FILE__'; then
 fi
 '@.Replace("__PID_FILE__", $remotePIDFile)
     Invoke-SSH -HostName $ServerHost -Command $command | Out-Null
+}
+
+function Set-PerformanceGovernor {
+    param([string]$HostName)
+    if (-not $SetPerformanceGovernor) {
+        return ""
+    }
+    $command = @'
+for path in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+  test -w "$path" || { printf 'CPU governor is not writable: %s\n' "$path" >&2; exit 1; }
+  printf '%s=%s\n' "$path" "$(cat "$path")"
+  printf performance >"$path"
+done
+'@
+    return Invoke-SSH -HostName $HostName -Command $command
+}
+
+function Restore-Governor {
+    param([string]$HostName, [string]$Snapshot)
+    if ([string]::IsNullOrWhiteSpace($Snapshot)) {
+        return
+    }
+    $commands = foreach ($line in $Snapshot -split "`n") {
+        $parts = $line.Split("=", 2)
+        if ($parts.Count -ne 2 -or $parts[0] -notmatch '^/sys/devices/system/cpu/cpu[0-9]+/cpufreq/scaling_governor$' -or $parts[1] -notmatch '^[a-z0-9_-]+$') {
+            throw "Invalid governor snapshot from ${HostName}: $line"
+        }
+        "printf '$($parts[1])' >'$($parts[0])'"
+    }
+    Invoke-SSH -HostName $HostName -Command ($commands -join "`n") | Out-Null
 }
 
 function Start-Server {
@@ -180,19 +211,23 @@ if ((Invoke-SSH -HostName $ClientHost -Command $clientCheck) -ne "ready") {
     throw "Client prerequisites are not satisfied"
 }
 
-Set-Content -LiteralPath $Output -Value @(
-    "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
-    "crossHost=true serverHost=$ServerHost clientHost=$ClientHost target=$TargetAddress",
-    "protocols=http2,https2 tlsVersions=1.2,1.3 payloads=$($Payloads -join ',') connections=$Connections messages=$Messages warmupMessages=$WarmupMessages latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds",
-    "serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs commonClient=gnalloy-tcp+handler-tls+codec-http2",
-    "unsupportedFrameworks=gnet,netpoll,fasthttp status=N/A reason=no-native-http2-codec"
-) -Encoding utf8
-
-$serverMetadata = Invoke-SSH -HostName $ServerHost -Command "hostname; uname -srmo; awk -F ': ' '/^model name/{print `"serverCPU=`" `$2; exit}' /proc/cpuinfo; sha256sum '$GnalloyBench' '$HertzBench' '$NettyBenchJar'"
-$clientMetadata = Invoke-SSH -HostName $ClientHost -Command "hostname; uname -srmo; awk -F ': ' '/^model name/{print `"clientCPU=`" `$2; exit}' /proc/cpuinfo; sha256sum '$ClientBench'; ping -c 10 '$ServerHost'"
-Add-Content -LiteralPath $Output -Value @($serverMetadata, $clientMetadata) -Encoding utf8
-
+$serverGovernorSnapshot = ""
+$clientGovernorSnapshot = ""
 try {
+    $serverGovernorSnapshot = Set-PerformanceGovernor -HostName $ServerHost
+    $clientGovernorSnapshot = Set-PerformanceGovernor -HostName $ClientHost
+    Set-Content -LiteralPath $Output -Value @(
+        "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
+        "crossHost=true serverHost=$ServerHost clientHost=$ClientHost target=$TargetAddress",
+        "protocols=http2,https2 tlsVersions=1.2,1.3 payloads=$($Payloads -join ',') connections=$Connections messages=$Messages warmupMessages=$WarmupMessages latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds",
+        "serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs commonClient=gnalloy-tcp+handler-tls+codec-http2 performanceGovernor=$SetPerformanceGovernor",
+        "unsupportedFrameworks=gnet,netpoll,fasthttp status=N/A reason=no-native-http2-codec"
+    ) -Encoding utf8
+
+    $serverMetadata = Invoke-SSH -HostName $ServerHost -Command "hostname; uname -srmo; awk -F ': ' '/^model name/{print `"serverCPU=`" `$2; exit}' /proc/cpuinfo; sha256sum '$GnalloyBench' '$HertzBench' '$NettyBenchJar'"
+    $clientMetadata = Invoke-SSH -HostName $ClientHost -Command "hostname; uname -srmo; awk -F ': ' '/^model name/{print `"clientCPU=`" `$2; exit}' /proc/cpuinfo; sha256sum '$ClientBench'; ping -c 10 '$ServerHost'"
+    Add-Content -LiteralPath $Output -Value @($serverMetadata, $clientMetadata) -Encoding utf8
+
     foreach ($protocolCase in (Get-ProtocolCases)) {
         foreach ($payload in $Payloads) {
             foreach ($unsupported in @("gnet", "netpoll", "fasthttp")) {
@@ -222,5 +257,13 @@ try {
         }
     }
 } finally {
-    Stop-Server
+    try {
+        Stop-Server
+    } finally {
+        try {
+            Restore-Governor -HostName $ClientHost -Snapshot $clientGovernorSnapshot
+        } finally {
+            Restore-Governor -HostName $ServerHost -Snapshot $serverGovernorSnapshot
+        }
+    }
 }

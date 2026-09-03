@@ -43,7 +43,7 @@ HTTP/3 在本矩阵内闭环：Gnalloy 的饱和吞吐、饱和 RTT P99，以及
 
 QUIC stream 使用 `transport-quic` 提供的连接与 stream、`application.LengthPrefixedCodec` 提供的编解码，以及有界 stream 执行器。Gnalloy 不再为每条短 stream 创建 goroutine，响应缓冲区可复用，codec 将完整帧单次提交。Netty 使用官方 `LengthFieldBasedFrameDecoder` 与 `LengthFieldPrepender`，没有 benchmark 自写长度字段编码。
 
-最终 Gnalloy 服务端二进制 SHA-256 为 `b5d652b76e3237faadf96530461fbdb58e725a11175dc590eed91f8e96a40c57`，Netty JAR 为 `62747f076b58ed92bca01b633f3e76803df558e4ac5a3f67a4ab8dafb1b0e69a`，公共客户端为 `cb50eccda1fd477d1d8587956b69d9b6d423a5b01837e684cd0d952ac5783d54`。
+最终 Gnalloy 服务端二进制 SHA-256 为 `b5d652b76e3237faadf96530461fbdb58e725a11175dc590eed91f8e96a40c57`，使用 Netty 官方长度 codec 的 JAR 为 `62747f076b58ed92bca01b633f3e76803df558e4ac5a3f67a4ab8dafb1b0e69a`，公共客户端为 `cb50eccda1fd477d1d8587956b69d9b6d423a5b01837e684cd0d952ac5783d54`。
 
 ### 饱和模式
 

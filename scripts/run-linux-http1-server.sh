@@ -98,7 +98,7 @@ if [[ "${GNALLOY_FLUSH_STRATEGY}" == "auto" ]]; then
   if [[ "${PROTOCOL}" == "https1" ]]; then
     GNALLOY_FLUSH_STRATEGY="immediate"
   else
-    GNALLOY_FLUSH_STRATEGY="event-loop-batch"
+    GNALLOY_FLUSH_STRATEGY="read-complete"
   fi
 fi
 case "${GNALLOY_FLUSH_STRATEGY}" in

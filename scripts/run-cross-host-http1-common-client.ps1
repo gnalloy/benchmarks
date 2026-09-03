@@ -356,7 +356,7 @@ function Resolve-GnalloyFlushStrategy {
     if ($Protocol -eq "https1") {
         return "immediate"
     }
-    return "event-loop-batch"
+    return "read-complete"
 }
 
 function Get-CipherSuites {

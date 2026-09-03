@@ -126,7 +126,7 @@ func runPhase(ctx context.Context, clients []client, cfg Config, messages int, s
 			results[id].completed, results[id].err = runClient(ctx, clients[id], id, messages, cfg.LatencySampleRate, start, &pacer, measured)
 		}(measured)
 	}
-	pacer.start = time.Now()
+	pacer.SetStart(time.Now())
 	close(start)
 	wait.Wait()
 	var total int64
@@ -145,7 +145,7 @@ func runClient(ctx context.Context, client client, id int, messages int, sampleR
 	case <-ctx.Done():
 		return 0, ctx.Err()
 	}
-	if pacer.enabled() {
+	if pacer.Enabled() {
 		return runPacedClient(ctx, client, id, messages, sampleRate, pacer, samples)
 	}
 	return runSaturatedClient(ctx, client, id, messages, sampleRate, samples)
@@ -198,7 +198,7 @@ func runPacedClient(ctx context.Context, client client, id int, messages int, sa
 			return completed, err
 		}
 		client.payload[0] = byte(id + index)
-		deadline, err := pacer.wait(ctx, timer, id, index)
+		deadline, err := pacer.Wait(ctx, timer, id, index)
 		if err != nil {
 			return completed, err
 		}

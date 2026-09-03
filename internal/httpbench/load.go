@@ -77,10 +77,11 @@ func runPhase(ctx context.Context, clients []client, cfg Config, messages int, m
 	}
 	phaseCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	pacer := newPhasePacer(time.Time{}, len(clients), cfg.TargetRate)
+	targetRate := cfg.TargetRate
 	if !measured {
-		pacer.targetRate = 0
+		targetRate = 0
 	}
+	pacer := newPhasePacer(time.Time{}, len(clients), targetRate)
 	start := make(chan struct{})
 	var wait sync.WaitGroup
 	for clientID := range clients {
@@ -90,7 +91,7 @@ func runPhase(ctx context.Context, clients []client, cfg Config, messages int, m
 			capacity := sampleCapacity(messages, cfg.LatencySampleRate)
 			samples[clientID].total = make([]int64, 0, capacity)
 			samples[clientID].roundTrip = make([]int64, 0, capacity)
-			if pacer.enabled() {
+			if pacer.Enabled() {
 				samples[clientID].scheduleDelay = make([]int64, 0, capacity)
 			}
 			clientSample = &samples[clientID]
@@ -106,10 +107,11 @@ func runPhase(ctx context.Context, clients []client, cfg Config, messages int, m
 			}
 		}(clientSample)
 	}
-	pacer.start = time.Now()
+	phaseStart := time.Now()
+	pacer.SetStart(phaseStart)
 	close(start)
 	wait.Wait()
-	elapsed := time.Since(pacer.start)
+	elapsed := time.Since(phaseStart)
 	var total int64
 	var firstErr error
 	for index := range results {
@@ -137,7 +139,7 @@ func runClient(
 		return 0, ctx.Err()
 	}
 	localPacer := *pacer
-	if localPacer.enabled() {
+	if localPacer.Enabled() {
 		return runPacedClient(ctx, client, clientID, messages, sampleRate, localPacer, samples)
 	}
 	return runSaturatedClient(ctx, client, messages, sampleRate, samples)
@@ -178,7 +180,7 @@ func runPacedClient(ctx context.Context, client *client, clientID int, messages 
 		if err := ctx.Err(); err != nil {
 			return completed, err
 		}
-		deadline, err := pacer.wait(ctx, timer, clientID, index)
+		deadline, err := pacer.Wait(ctx, timer, clientID, index)
 		if err != nil {
 			return completed, err
 		}

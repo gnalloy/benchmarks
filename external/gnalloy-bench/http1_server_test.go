@@ -48,10 +48,10 @@ func TestHTTP1HandlerDoesNotResubmitOwnerLoopWrite(t *testing.T) {
 	}
 }
 
-func TestHTTP1ResponseEncoderCoalescesSmallBody(t *testing.T) {
+func TestHTTPS1ResponseEncoderCoalescesSmallBody(t *testing.T) {
 	sink := &releasingSink{}
 	ch := channel.NewLocalChannel(1, buffer.NewHeapAllocator(), sink)
-	if err := ch.Pipeline().AddLast("encoder", newHTTP1ResponseEncoder(128)); err != nil {
+	if err := ch.Pipeline().AddLast("encoder", newHTTP1ResponseEncoder("https1", 128)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -63,10 +63,25 @@ func TestHTTP1ResponseEncoderCoalescesSmallBody(t *testing.T) {
 	}
 }
 
-func TestHTTP1ResponseEncoderSplitsLargeBody(t *testing.T) {
+func TestHTTP1ResponseEncoderSplitsSmallBody(t *testing.T) {
 	sink := &releasingSink{}
 	ch := channel.NewLocalChannel(1, buffer.NewHeapAllocator(), sink)
-	if err := ch.Pipeline().AddLast("encoder", newHTTP1ResponseEncoder(maxCoalescedHTTP1BodyBytes+1)); err != nil {
+	if err := ch.Pipeline().AddLast("encoder", newHTTP1ResponseEncoder("http1", 128)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ch.Write(http1.Response{StatusCode: 200, Body: buffer.NewSharedBuffer(make([]byte, 128))}); err != nil {
+		t.Fatal(err)
+	}
+	if sink.writes != 2 {
+		t.Fatalf("writes=%d, want split header and body", sink.writes)
+	}
+}
+
+func TestHTTPS1ResponseEncoderSplitsLargeBody(t *testing.T) {
+	sink := &releasingSink{}
+	ch := channel.NewLocalChannel(1, buffer.NewHeapAllocator(), sink)
+	if err := ch.Pipeline().AddLast("encoder", newHTTP1ResponseEncoder("https1", maxCoalescedHTTP1BodyBytes+1)); err != nil {
 		t.Fatal(err)
 	}
 

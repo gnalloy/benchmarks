@@ -63,7 +63,7 @@ func addHTTP1CodecPipeline(ch channel.Channel, cfg config) error {
 	if err != nil {
 		return err
 	}
-	encoder := newHTTP1ResponseEncoder(cfg.Payload)
+	encoder := newHTTP1ResponseEncoder(cfg.Protocol, cfg.Payload)
 	if err := ch.Pipeline().AddLast("httpEncoder", encoder); err != nil {
 		return err
 	}
@@ -81,8 +81,8 @@ func addHTTP1CodecPipeline(ch channel.Channel, cfg config) error {
 	})
 }
 
-func newHTTP1ResponseEncoder(payload int) *http1.ResponseEncoder {
-	if payload > 0 && payload <= maxCoalescedHTTP1BodyBytes {
+func newHTTP1ResponseEncoder(protocol string, payload int) *http1.ResponseEncoder {
+	if protocol == "https1" && payload > 0 && payload <= maxCoalescedHTTP1BodyBytes {
 		return http1.NewResponseEncoderWithOptions(http1.ResponseEncoderOptions{
 			CoalesceBodyBytes: maxCoalescedHTTP1BodyBytes,
 		})

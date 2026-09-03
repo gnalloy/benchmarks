@@ -10,6 +10,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.quic.InsecureQuicTokenHandler;
 import io.netty.handler.codec.quic.QuicServerCodecBuilder;
 import io.netty.handler.codec.quic.QuicSslContext;
@@ -99,6 +100,7 @@ final class QuicStreamServer implements AutoCloseable {
                     protected void initChannel(QuicStreamChannel channel) {
                         channel.pipeline()
                                 .addLast(QuicStreamFrame.decoder())
+                                .addLast(new LengthFieldPrepender(Short.BYTES))
                                 .addLast(new EchoHandler());
                     }
                 })
@@ -108,7 +110,7 @@ final class QuicStreamServer implements AutoCloseable {
     private static final class EchoHandler extends SimpleChannelInboundHandler<io.netty.buffer.ByteBuf> {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, io.netty.buffer.ByteBuf payload) {
-            ctx.writeAndFlush(QuicStreamFrame.encode(ctx.alloc(), payload))
+            ctx.writeAndFlush(payload.retainedDuplicate())
                     .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT)
                     .addListener(ChannelFutureListener.CLOSE);
         }

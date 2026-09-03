@@ -6,6 +6,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
@@ -25,11 +26,12 @@ record QuicStreamClient(Channel datagram, QuicChannel channel, byte[] payload, b
             protected void initChannel(QuicStreamChannel stream) {
                 stream.pipeline()
                         .addLast(QuicStreamFrame.decoder())
+                        .addLast(new LengthFieldPrepender(Short.BYTES))
                         .addLast(handler);
             }
         });
         QuicStreamChannel stream = streamFuture.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-        ByteBuf request = QuicStreamFrame.encode(stream.alloc(), payload);
+        ByteBuf request = stream.alloc().buffer(payload.length, payload.length).writeBytes(payload);
         stream.writeAndFlush(request)
                 .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT)
                 .get(timeout.toMillis(), TimeUnit.MILLISECONDS);

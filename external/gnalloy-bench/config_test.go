@@ -364,6 +364,20 @@ func TestParseConfigSupportsHTTPS1ServerOnly(t *testing.T) {
 	}
 }
 
+func TestParseConfigSupportsHTTP2ServerOnly(t *testing.T) {
+	for _, protocol := range []string{"http2", "https2"} {
+		t.Run(protocol, func(t *testing.T) {
+			cfg, err := parseConfig([]string{"-protocol", protocol, "-server-only=true"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cfg.ServerOnly {
+				t.Fatal("server-only=false, want true")
+			}
+		})
+	}
+}
+
 func TestRunServerOnlyHTTPS1(t *testing.T) {
 	cfg, err := parseConfig([]string{
 		"-protocol", "https1",
@@ -383,6 +397,29 @@ func TestRunServerOnlyHTTPS1(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(output.String(), "serverReady=true framework=gnalloy protocol=https1") {
+		t.Fatalf("output=%q", output.String())
+	}
+}
+
+func TestRunServerOnlyHTTP2(t *testing.T) {
+	cfg, err := parseConfig([]string{
+		"-protocol", "http2",
+		"-server-only=true",
+		"-addr", "127.0.0.1:0",
+		"-payload", "16",
+		"-boss", "1",
+		"-workers", "1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	output := readyCancelWriter{cancel: cancel}
+	if err := runServerOnly(ctx, cfg, &output); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), "serverReady=true framework=gnalloy protocol=http2") {
 		t.Fatalf("output=%q", output.String())
 	}
 }

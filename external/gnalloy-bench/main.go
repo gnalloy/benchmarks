@@ -62,6 +62,13 @@ func runServerOnly(ctx context.Context, cfg config, stdout io.Writer) error {
 		}
 		defer server.stop()
 		return waitForServerStop(ctx, stdout, cfg, server.addr)
+	case "http2", "https2":
+		server, err := startHTTP2Server(ctx, cfg)
+		if err != nil {
+			return err
+		}
+		defer server.stop()
+		return waitForServerStop(ctx, stdout, cfg, server.addr)
 	default:
 		return fmt.Errorf("%w: server-only does not support %s", errInvalidConfig, cfg.Protocol)
 	}

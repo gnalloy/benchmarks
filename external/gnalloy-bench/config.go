@@ -251,8 +251,8 @@ func (c config) validate() error {
 	if c.Protocol == "https2" && c.TLSVersion == tlsVersion11 {
 		return fmt.Errorf("%w: HTTP/2 over TLS requires TLS 1.2 or newer", errInvalidConfig)
 	}
-	if c.ServerOnly && c.Protocol != "udp-echo" && c.Protocol != "http1" && c.Protocol != "https1" {
-		return fmt.Errorf("%w: server-only requires udp-echo, http1 or https1 protocol", errInvalidConfig)
+	if c.ServerOnly && c.Protocol != "udp-echo" && c.Protocol != "http1" && c.Protocol != "https1" && c.Protocol != "http2" && c.Protocol != "https2" {
+		return fmt.Errorf("%w: server-only requires udp-echo, http1, https1, http2 or https2 protocol", errInvalidConfig)
 	}
 	if c.Protocol == "http3" {
 		return ensureHTTP3Config(c)

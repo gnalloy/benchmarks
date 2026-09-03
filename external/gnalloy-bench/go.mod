@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	gnalloy.org/benchmarks v0.0.0-20260902210848-86a78a44ee7c
-	gnalloy.org/codec-http1 v0.0.0-20260902235418-56307185ecfa
+	gnalloy.org/codec-http1 v0.0.0-20260903002830-1053ed9b3796
 	gnalloy.org/codec-http2 v0.0.0-20260902212248-301a69ebe19b
 	gnalloy.org/codec-http3 v0.0.0-20260902212440-a8ef849f4c5c
 	gnalloy.org/gnalloy v0.0.0-20260902225229-13bb86030d0f

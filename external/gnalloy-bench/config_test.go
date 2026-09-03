@@ -406,6 +406,20 @@ func TestParseConfigSupportsHTTP3StandaloneModes(t *testing.T) {
 	}
 }
 
+func TestParseConfigSupportsQUICStreamStandaloneModes(t *testing.T) {
+	for _, flag := range []string{"-server-only=true", "-client-only=true"} {
+		t.Run(flag, func(t *testing.T) {
+			cfg, err := parseConfig([]string{"-protocol", "quic-stream", flag})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cfg.ServerOnly && !cfg.ClientOnly {
+				t.Fatalf("cfg=%+v, want standalone mode", cfg)
+			}
+		})
+	}
+}
+
 func TestParseConfigRejectsConflictingStandaloneModes(t *testing.T) {
 	_, err := parseConfig([]string{"-protocol", "http2", "-server-only=true", "-client-only=true"})
 	if !errors.Is(err, errInvalidConfig) {
@@ -484,6 +498,31 @@ func TestRunServerOnlyHTTP3(t *testing.T) {
 	}
 }
 
+func TestRunServerOnlyQUICStream(t *testing.T) {
+	cfg, err := parseConfig([]string{
+		"-protocol", "quic-stream",
+		"-server-only=true",
+		"-addr", "127.0.0.1:0",
+		"-payload", "16",
+		"-connections", "1",
+		"-messages", "1",
+		"-boss", "1",
+		"-workers", "1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	output := readyCancelWriter{cancel: cancel}
+	if err := runServerOnly(ctx, cfg, &output); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), "serverReady=true framework=gnalloy protocol=quic-stream") {
+		t.Fatalf("output=%q", output.String())
+	}
+}
+
 func TestRunClientOnlyHTTP2(t *testing.T) {
 	serverConfig, err := parseConfig([]string{
 		"-protocol", "http2",
@@ -543,6 +582,37 @@ func TestRunClientOnlyHTTP3(t *testing.T) {
 	}
 	if result.TotalRequests != 1 || result.Errors != 0 || result.Protocol != http3ALPNValue {
 		t.Fatalf("result=%+v, want one successful HTTP/3 request", result)
+	}
+}
+
+func TestRunClientOnlyQUICStream(t *testing.T) {
+	serverConfig, err := parseConfig([]string{
+		"-protocol", "quic-stream",
+		"-addr", "127.0.0.1:0",
+		"-payload", "16",
+		"-connections", "1",
+		"-messages", "1",
+		"-boss", "1",
+		"-workers", "1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := startQUICStreamServer(context.Background(), serverConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.stop()
+
+	clientConfig := serverConfig
+	clientConfig.ClientOnly = true
+	clientConfig.Addr = server.addr
+	result, err := runClientOnly(context.Background(), clientConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TotalRequests != 1 || result.Errors != 0 || result.Protocol != quicStreamALPNValue {
+		t.Fatalf("result=%+v, want one successful QUIC stream request", result)
 	}
 }
 
@@ -711,6 +781,16 @@ func TestParseConfigSupportsTargetRate(t *testing.T) {
 
 func TestParseConfigSupportsHTTP3TargetRate(t *testing.T) {
 	cfg, err := parseConfig([]string{"-protocol", "http3", "-target-rate", "30000"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.TargetRate != 30000 {
+		t.Fatalf("targetRate=%d, want 30000", cfg.TargetRate)
+	}
+}
+
+func TestParseConfigSupportsQUICStreamTargetRate(t *testing.T) {
+	cfg, err := parseConfig([]string{"-protocol", "quic-stream", "-target-rate", "30000"})
 	if err != nil {
 		t.Fatal(err)
 	}

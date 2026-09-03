@@ -226,6 +226,7 @@ func TestRunBenchmarkQUICStream(t *testing.T) {
 		"-workers", "1",
 		"-latency-sample-rate", "1",
 		"-warmup-messages", "1",
+		"-target-rate", "100",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -237,7 +238,7 @@ func TestRunBenchmarkQUICStream(t *testing.T) {
 	if result.TotalRequests != 2 || result.Errors != 0 || result.NsPerOp <= 0 {
 		t.Fatalf("result=%+v", result)
 	}
-	if result.Protocol != "gnalloy-quic" || result.Latency.Samples != 2 || result.Latency.P50 <= 0 {
+	if result.Protocol != "gnalloy-quic" || result.Latency.Samples != 2 || result.ScheduleDelay.Samples != 2 || result.RoundTrip.Samples != 2 || result.Latency.P50 <= 0 {
 		t.Fatalf("result=%+v", result)
 	}
 }

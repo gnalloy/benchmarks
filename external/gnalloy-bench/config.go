@@ -252,8 +252,8 @@ func (c config) validate() error {
 	if c.TargetRate < 0 {
 		return fmt.Errorf("%w: target-rate must not be negative", errInvalidConfig)
 	}
-	if c.TargetRate > 0 && c.Protocol != "http1" && c.Protocol != "https1" && c.Protocol != "http2" && c.Protocol != "https2" && c.Protocol != "http3" {
-		return fmt.Errorf("%w: target-rate currently requires an HTTP protocol", errInvalidConfig)
+	if c.TargetRate > 0 && c.Protocol != "http1" && c.Protocol != "https1" && c.Protocol != "http2" && c.Protocol != "https2" && c.Protocol != "http3" && c.Protocol != "quic-stream" {
+		return fmt.Errorf("%w: target-rate requires HTTP or QUIC stream protocol", errInvalidConfig)
 	}
 	if c.WarmupMessages < 0 {
 		return fmt.Errorf("%w: warmup-messages must not be negative", errInvalidConfig)
@@ -267,8 +267,8 @@ func (c config) validate() error {
 	if c.ServerOnly && !supportsServerOnly(c.Protocol) {
 		return fmt.Errorf("%w: server-only requires udp-echo or an HTTP protocol", errInvalidConfig)
 	}
-	if c.ClientOnly && c.Protocol != "http2" && c.Protocol != "https2" && c.Protocol != "http3" {
-		return fmt.Errorf("%w: client-only requires HTTP/2 or HTTP/3 protocol", errInvalidConfig)
+	if c.ClientOnly && c.Protocol != "http2" && c.Protocol != "https2" && c.Protocol != "http3" && c.Protocol != "quic-stream" {
+		return fmt.Errorf("%w: client-only requires HTTP/2, HTTP/3 or QUIC stream protocol", errInvalidConfig)
 	}
 	if c.Protocol == "http3" {
 		return ensureHTTP3Config(c)
@@ -281,7 +281,7 @@ func (c config) validate() error {
 
 func supportsServerOnly(protocol string) bool {
 	switch protocol {
-	case "udp-echo", "http1", "https1", "http2", "https2", "http3":
+	case "udp-echo", "http1", "https1", "http2", "https2", "http3", "quic-stream":
 		return true
 	default:
 		return false

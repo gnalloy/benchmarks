@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"gnalloy.org/benchmarks/internal/loadgen"
 	"gnalloy.org/transport-quic"
 	"gnalloy.org/transport-quic/application"
 )
@@ -27,16 +28,11 @@ func runQUICStreamBenchmark(ctx context.Context, cfg config) (benchResult, error
 	}
 	defer server.stop()
 
-	resourcesBefore := captureResourceSnapshot()
-	result, err := runQUICStreamLoad(ctx, server.addr, cfg)
-	result.Resources = resourceDeltaSince(resourcesBefore, captureResourceSnapshot())
-	if err != nil {
-		return result, err
-	}
-	return result, nil
+	return runQUICStreamLoad(ctx, server.addr, cfg)
 }
 
 func runQUICStreamLoad(parent context.Context, addr string, cfg config) (benchResult, error) {
+	resourcesBefore := captureResourceSnapshot()
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 
@@ -57,10 +53,10 @@ func runQUICStreamLoad(parent context.Context, addr string, cfg config) (benchRe
 		firstErr  error
 		once      sync.Once
 		wg        sync.WaitGroup
-		samples   [][]int64
+		samples   []decomposedLatencySamples
 	)
 	if latencySamplingEnabled(cfg.LatencySampleRate) {
-		samples = make([][]int64, cfg.Connections)
+		samples = make([]decomposedLatencySamples, cfg.Connections)
 	}
 	recordError := func(err error) {
 		if err == nil {
@@ -74,20 +70,28 @@ func runQUICStreamLoad(parent context.Context, addr string, cfg config) (benchRe
 	}
 
 	startCh := make(chan struct{})
+	pacer := loadgen.NewPacer(time.Time{}, len(clients), cfg.TargetRate)
+	pacingEnabled := pacer.Enabled()
 	for i := range clients {
 		clientID := i
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			var clientSamples *[]int64
+			var clientSamples *decomposedLatencySamples
 			if samples != nil {
-				samples[clientID] = newLatencySamples(cfg.Messages, cfg.LatencySampleRate)
+				capacity := estimatePerClientLatencySampleCount(cfg.Messages, cfg.LatencySampleRate)
+				samples[clientID].total = make([]int64, 0, capacity)
+				samples[clientID].roundTrip = make([]int64, 0, capacity)
+				if pacingEnabled {
+					samples[clientID].scheduleDelay = make([]int64, 0, capacity)
+				}
 				clientSamples = &samples[clientID]
 			}
-			recordError(runQUICStreamClientMessages(ctx, clients[clientID], cfg, clientID, startCh, cfg.Messages, &successes, clientSamples))
+			recordError(runQUICStreamClientMessages(ctx, clients[clientID], cfg, clientID, startCh, cfg.Messages, &pacer, &successes, clientSamples))
 		}()
 	}
 	start := time.Now()
+	pacer.SetStart(start)
 	close(startCh)
 	wg.Wait()
 	elapsed := time.Since(start)
@@ -101,13 +105,12 @@ func runQUICStreamLoad(parent context.Context, addr string, cfg config) (benchRe
 		Errors:        errorsN.Load(),
 		Elapsed:       elapsed,
 		Protocol:      firstQUICStreamALPN(clients),
+		Resources:     resourceDeltaSince(resourcesBefore, captureResourceSnapshot()),
 	}
 	if samples != nil {
-		allSamples := make([]int64, 0, estimateLatencySampleCount(cfg.Connections, cfg.Messages, cfg.LatencySampleRate))
-		for _, clientSamples := range samples {
-			allSamples = append(allSamples, clientSamples...)
-		}
-		result.Latency = summarizeLatencySamples(allSamples)
+		result.Latency = summarizeDecomposedLatencySamples(samples, func(sample decomposedLatencySamples) []int64 { return sample.total })
+		result.ScheduleDelay = summarizeDecomposedLatencySamples(samples, func(sample decomposedLatencySamples) []int64 { return sample.scheduleDelay })
+		result.RoundTrip = summarizeDecomposedLatencySamples(samples, func(sample decomposedLatencySamples) []int64 { return sample.roundTrip })
 	}
 	result.Throughput = float64(total) / elapsed.Seconds()
 	if total > 0 {
@@ -181,7 +184,8 @@ func warmupQUICStreamClients(ctx context.Context, clients []quicStreamClient, cf
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			recordError(runQUICStreamClientMessages(ctx, clients[clientID], cfg, clientID, startCh, cfg.WarmupMessages, nil, nil))
+			disabledPacer := loadgen.Pacer{}
+			recordError(runQUICStreamClientMessages(ctx, clients[clientID], cfg, clientID, startCh, cfg.WarmupMessages, &disabledPacer, nil, nil))
 		}()
 	}
 	close(startCh)
@@ -214,35 +218,69 @@ func closeQUICStreamClientsOnContext(ctx context.Context, clients []quicStreamCl
 	}
 }
 
-func runQUICStreamClientMessages(ctx context.Context, client quicStreamClient, cfg config, clientID int, startCh <-chan struct{}, messageCount int, successes *atomic.Int64, latencySamples *[]int64) error {
+func runQUICStreamClientMessages(ctx context.Context, client quicStreamClient, cfg config, clientID int, startCh <-chan struct{}, messageCount int, sharedPacer *loadgen.Pacer, successes *atomic.Int64, samples *decomposedLatencySamples) error {
 	select {
 	case <-startCh:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+	pacer := *sharedPacer
+	var timer *time.Timer
+	if pacer.Enabled() {
+		timer = time.NewTimer(time.Hour)
+		if !timer.Stop() {
+			<-timer.C
+		}
+		defer timer.Stop()
+	}
 	for i := 0; i < messageCount; i++ {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		deadline := time.Time{}
+		if pacer.Enabled() {
+			var err error
+			deadline, err = pacer.Wait(ctx, timer, clientID, i)
+			if err != nil {
+				return err
+			}
 		}
 		client.payload[0] = byte(clientID + i)
-		recordLatency := latencySamples != nil && shouldRecordLatency(i, cfg.LatencySampleRate)
-		var requestStarted time.Time
+		recordLatency := samples != nil && shouldRecordLatency(i, cfg.LatencySampleRate)
+		var sendStarted time.Time
 		if recordLatency {
-			requestStarted = time.Now()
+			sendStarted = time.Now()
 		}
 		if err := runQUICStreamRequest(ctx, client, cfg); err != nil {
 			return err
 		}
-		if recordLatency && latencySamples != nil {
-			*latencySamples = append(*latencySamples, elapsedLatencyNanos(requestStarted))
+		if recordLatency {
+			completedAt := time.Now()
+			roundTrip := positiveLatencyNanos(completedAt.Sub(sendStarted))
+			samples.roundTrip = append(samples.roundTrip, roundTrip)
+			if pacer.Enabled() {
+				samples.total = append(samples.total, positiveLatencyNanos(completedAt.Sub(deadline)))
+				samples.scheduleDelay = append(samples.scheduleDelay, nonNegativeLatencyNanos(sendStarted.Sub(deadline)))
+			} else {
+				samples.total = append(samples.total, roundTrip)
+			}
 		}
 		if successes != nil {
 			successes.Add(1)
 		}
 	}
 	return nil
+}
+
+func estimatePerClientLatencySampleCount(messages int, rate int) int {
+	if messages <= 0 || rate <= 0 {
+		return 0
+	}
+	count := messages / rate
+	if messages%rate != 0 {
+		count++
+	}
+	return count
 }
 
 func runQUICStreamRequest(ctx context.Context, client quicStreamClient, cfg config) error {

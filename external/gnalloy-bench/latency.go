@@ -14,6 +14,12 @@ type latencySummary struct {
 	Max     time.Duration
 }
 
+type decomposedLatencySamples struct {
+	total         []int64
+	scheduleDelay []int64
+	roundTrip     []int64
+}
+
 func latencySamplingEnabled(rate int) bool {
 	return rate > 0
 }
@@ -28,6 +34,20 @@ func elapsedLatencyNanos(started time.Time) int64 {
 		return 1
 	}
 	return elapsed
+}
+
+func positiveLatencyNanos(value time.Duration) int64 {
+	if value <= 0 {
+		return 1
+	}
+	return value.Nanoseconds()
+}
+
+func nonNegativeLatencyNanos(value time.Duration) int64 {
+	if value <= 0 {
+		return 0
+	}
+	return value.Nanoseconds()
 }
 
 func newLatencySamples(messages int, rate int) []int64 {
@@ -59,6 +79,18 @@ func summarizeLatencySamples(samples []int64) latencySummary {
 		P999:    percentileDuration(samples, 0.999),
 		Max:     time.Duration(samples[len(samples)-1]),
 	}
+}
+
+func summarizeDecomposedLatencySamples(samples []decomposedLatencySamples, values func(decomposedLatencySamples) []int64) latencySummary {
+	count := 0
+	for _, sample := range samples {
+		count += len(values(sample))
+	}
+	all := make([]int64, 0, count)
+	for _, sample := range samples {
+		all = append(all, values(sample)...)
+	}
+	return summarizeLatencySamples(all)
 }
 
 func percentileDuration(sorted []int64, q float64) time.Duration {

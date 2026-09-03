@@ -15,6 +15,7 @@ SERVER_CPU_SET="${SERVER_CPU_SET:-0,1,2,3}"
 SERVER_GOMAXPROCS="${SERVER_GOMAXPROCS:-4}"
 EVENT_LOOPS="${EVENT_LOOPS:-4}"
 GNALLOY_WORKERS="${GNALLOY_WORKERS:-3}"
+GNALLOY_BACKEND="${GNALLOY_BACKEND:-epoll}"
 GNALLOY_READ_BUFFER_SIZE="${GNALLOY_READ_BUFFER_SIZE:-4096}"
 GNALLOY_MAX_MESSAGES_PER_READ="${GNALLOY_MAX_MESSAGES_PER_READ:-32}"
 GNALLOY_EVENT_BATCH_SIZE="${GNALLOY_EVENT_BATCH_SIZE:-0}"
@@ -94,6 +95,13 @@ require_positive_integer GNALLOY_WORKERS "${GNALLOY_WORKERS}"
 require_positive_integer GNALLOY_READ_BUFFER_SIZE "${GNALLOY_READ_BUFFER_SIZE}"
 require_positive_integer GNALLOY_MAX_MESSAGES_PER_READ "${GNALLOY_MAX_MESSAGES_PER_READ}"
 require_nonnegative_integer GNALLOY_EVENT_BATCH_SIZE "${GNALLOY_EVENT_BATCH_SIZE}"
+case "${GNALLOY_BACKEND}" in
+  epoll|iouring) ;;
+  *)
+    printf 'unsupported Gnalloy backend: %s\n' "${GNALLOY_BACKEND}" >&2
+    exit 1
+    ;;
+esac
 if [[ "${PROTOCOL}" != "http1" && "${PROTOCOL}" != "https1" ]]; then
   printf 'unsupported HTTP/1 family protocol: %s\n' "${PROTOCOL}" >&2
   exit 1
@@ -145,7 +153,7 @@ case "${FRAMEWORK}" in
       profile_args+=( -trace "${GNALLOY_RUNTIME_TRACE}" )
     fi
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${GNALLOY_BENCH}" \
-      -protocol "${PROTOCOL}" -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -backend epoll -boss 1 \
+      -protocol "${PROTOCOL}" -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -backend "${GNALLOY_BACKEND}" -boss 1 \
       -workers "${GNALLOY_WORKERS}" -boss-cpus "${GNALLOY_BOSS_CPU_SET}" \
       -worker-cpus "${GNALLOY_WORKER_CPU_SET}" -reuseport=true -read-buffer-size "${GNALLOY_READ_BUFFER_SIZE}" \
       -max-messages-per-read "${GNALLOY_MAX_MESSAGES_PER_READ}" -event-batch-size "${GNALLOY_EVENT_BATCH_SIZE}" \

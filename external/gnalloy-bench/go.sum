@@ -16,8 +16,8 @@ gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98 h1:Hilym9O+lbWe
 gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98/go.mod h1:Y5Bk5clhC0i3lilHSjH1bxmc0Ls7fRqSvYf5mV0PXUw=
 gnalloy.org/codec-http1 v0.0.0-20260903004805-2018cdfc650d h1:BL3F9/29ejId3lIwWRJ194yNj9dzrJLIHotvPnjcAXs=
 gnalloy.org/codec-http1 v0.0.0-20260903004805-2018cdfc650d/go.mod h1:EtAs9vY0gLHA2QvwVDwkq+R88JWaUCakKmVVZx1/glg=
-gnalloy.org/codec-http2 v0.0.0-20260903120610-cab5dd9d9272 h1:GqK/lV1nNM6rQ2eDkeegxsZ7LRDwkTBYQ08e4fZcRcA=
-gnalloy.org/codec-http2 v0.0.0-20260903120610-cab5dd9d9272/go.mod h1:0GZ+RiJmm2mDCD6ROVCk5Xrdsu0nK8ErAlUNvF93giI=
+gnalloy.org/codec-http2 v0.0.0-20260903122818-985fb6a2c3da h1:VhNoVQ8q5+Tz4eQLuRR7hf60d49/OKcccRzE5bhqhtw=
+gnalloy.org/codec-http2 v0.0.0-20260903122818-985fb6a2c3da/go.mod h1:0GZ+RiJmm2mDCD6ROVCk5Xrdsu0nK8ErAlUNvF93giI=
 gnalloy.org/codec-http3 v0.0.0-20260902212440-a8ef849f4c5c h1:Qfcqq8aIIBK5HfyU0VQizT2odPH5GLTyNeyEo5VdOVg=
 gnalloy.org/codec-http3 v0.0.0-20260902212440-a8ef849f4c5c/go.mod h1:MBNFwm9b8ZerfrTi2UtIP7MUloRao8vP/QLQxiXRedg=
 gnalloy.org/gnalloy v0.0.0-20260902225229-13bb86030d0f h1:LpLxby2tBNQAil2WCo3LYMGRuN32QuSpyxUb/aBuLjQ=

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -55,6 +56,33 @@ func TestRunLoadHTTP2Cleartext(t *testing.T) {
 	}
 	if requests.Load() != 3 {
 		t.Fatalf("requests=%d, want=3", requests.Load())
+	}
+}
+
+func TestRunLoadHTTP2MoreConnectionsThanEventLoops(t *testing.T) {
+	previous := runtime.GOMAXPROCS(2)
+	defer runtime.GOMAXPROCS(previous)
+
+	var requests atomic.Int64
+	server := httptest.NewServer(h2c.NewHandler(benchmarkHandler(t, 16, &requests), &xhttp2.Server{}))
+	defer server.Close()
+
+	result, err := RunLoad(context.Background(), Config{
+		Addr:           serverAddress(t, server.URL),
+		Payload:        16,
+		Connections:    3,
+		Messages:       2,
+		WarmupMessages: 1,
+		Timeout:        2 * time.Second,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TotalRequests != 6 || result.Errors != 0 {
+		t.Fatalf("result=%+v", result)
+	}
+	if requests.Load() != 9 {
+		t.Fatalf("requests=%d, want=9", requests.Load())
 	}
 }
 

@@ -33,6 +33,7 @@ try {
             "external/gnalloy-bench",
             "external/gnet-bench",
             "external/fasthttp-bench",
+            "external/hertz-bench",
             "external/netpoll-bench"
         )
         foreach ($module in $externalModules) {

@@ -33,6 +33,16 @@ Build external harnesses first, then run the built-in matrix from the workspace 
 
 The Linux matrix covers TCP, UDP, QUIC stream, HTTP/1.1, HTTP/2, HTTP/3, HTTPS TLS 1.1/1.2/1.3, Gnalloy, Netty, gnet, fasthttp, and netpoll. Illegal or unsupported combinations are recorded as skipped scenarios with explicit reasons. Executable scenarios pass a 15-minute harness timeout and use a 16-minute outer scenario guard.
 
+## Cross-Host HTTP/1 Benchmark
+
+Run the common HTTP/1 client on Debian `172.16.8.172` while each server runs serially on Debian `172.16.8.171`:
+
+```powershell
+.\scripts\run-cross-host-http1-common-client.ps1
+```
+
+The runner uses Gnalloy's real TCP transport, channel pipeline, HTTP/1 codec, TLS handler when enabled, and application handler. Its default `auto` flush policy selects event-loop batching for plaintext HTTP/1 and immediate flush for HTTPS/1. Plaintext benefits from write batching, while the TLS pipeline already coalesces each small response before encryption and avoids an additional event-loop-tail delay with immediate flush. Pass `-GnalloyFlushStrategy` to test one fixed public channel strategy across all cases. gnet and netpoll are reported as `N/A` because neither framework provides an HTTP codec; the benchmark does not add its own parser or fixed-response bypass.
+
 ## Focused Linux TCP Benchmark
 
 After building `external/bin/gnalloy-bench` and `external/bin/netpoll-bench`, run the focused TCP comparison on one Linux host:

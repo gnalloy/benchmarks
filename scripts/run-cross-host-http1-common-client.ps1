@@ -52,8 +52,8 @@ param(
     [int]$GnalloyMaxMessagesPerRead = 32,
     [ValidateRange(0, [int]::MaxValue)]
     [int]$GnalloyEventBatchSize = 0,
-    [ValidateSet("immediate", "read-complete", "event-loop-batch")]
-    [string]$GnalloyFlushStrategy = "event-loop-batch",
+    [ValidateSet("auto", "immediate", "read-complete", "event-loop-batch")]
+    [string]$GnalloyFlushStrategy = "auto",
     [string]$GnalloyBossCPUSet = "3",
     [string]$GnalloyWorkerCPUSet = "0,1,2",
     [switch]$CaptureCPUProfile,
@@ -204,6 +204,7 @@ function Start-RemoteServer {
         [string]$TLSVersion,
         [string]$CipherSuites,
         [int]$Payload,
+        [string]$FlushStrategy,
         [string]$CPUProfile = "",
         [string]$AllocProfile = "",
         [string]$RuntimeTrace = ""
@@ -229,7 +230,7 @@ nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS
         Replace("__READ_BUFFER_SIZE__", $GnalloyReadBufferSize.ToString()).
         Replace("__MAX_MESSAGES_PER_READ__", $GnalloyMaxMessagesPerRead.ToString()).
         Replace("__EVENT_BATCH_SIZE__", $GnalloyEventBatchSize.ToString()).
-        Replace("__FLUSH_STRATEGY__", $GnalloyFlushStrategy).
+        Replace("__FLUSH_STRATEGY__", $FlushStrategy).
         Replace("__BOSS_CPUS__", $GnalloyBossCPUSet).
         Replace("__WORKER_CPUS__", $GnalloyWorkerCPUSet).
         Replace("__CPU_PROFILE__", $CPUProfile).
@@ -324,14 +325,15 @@ function Invoke-Case {
         Add-Content -LiteralPath $Output -Value $case -Encoding utf8
         return
     }
-    $case = "case=$Framework protocol=$Protocol tlsVersion=$TLSVersion cipherSuites=$CipherSuites payload=$Payload run=$Run"
+    $flushStrategy = Resolve-GnalloyFlushStrategy -Protocol $Protocol
+    $case = "case=$Framework protocol=$Protocol tlsVersion=$TLSVersion cipherSuites=$CipherSuites payload=$Payload run=$Run gnalloyFlushStrategy=$flushStrategy"
     Write-Output $case
     Add-Content -LiteralPath $Output -Value $case -Encoding utf8
     $profiles = Get-ProfilePaths -Framework $Framework -Protocol $Protocol -TLSVersion $TLSVersion -Payload $Payload -Run $Run
     foreach ($remotePath in $profiles.Values) {
         Invoke-SSH -HostName $ServerHost -Command "rm -f -- '$remotePath'" -IgnoreStandardError | Out-Null
     }
-    Start-RemoteServer -Framework $Framework -Protocol $Protocol -TLSVersion $TLSVersion -CipherSuites $CipherSuites -Payload $Payload -CPUProfile $profiles["CPUProfile"] -AllocProfile $profiles["AllocProfile"] -RuntimeTrace $profiles["RuntimeTrace"]
+    Start-RemoteServer -Framework $Framework -Protocol $Protocol -TLSVersion $TLSVersion -CipherSuites $CipherSuites -Payload $Payload -FlushStrategy $flushStrategy -CPUProfile $profiles["CPUProfile"] -AllocProfile $profiles["AllocProfile"] -RuntimeTrace $profiles["RuntimeTrace"]
     try {
         Invoke-Client -Framework $Framework -Protocol $Protocol -TLSVersion $TLSVersion -CipherSuites $CipherSuites -Payload $Payload
     } finally {
@@ -344,6 +346,17 @@ function Invoke-Case {
     if ($CooldownSeconds -gt 0) {
         Start-Sleep -Seconds $CooldownSeconds
     }
+}
+
+function Resolve-GnalloyFlushStrategy {
+    param([string]$Protocol)
+    if ($GnalloyFlushStrategy -ne "auto") {
+        return $GnalloyFlushStrategy
+    }
+    if ($Protocol -eq "https1") {
+        return "immediate"
+    }
+    return "event-loop-batch"
 }
 
 function Get-CipherSuites {
@@ -412,7 +425,7 @@ try {
         "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
         "crossHost=true clientHost=$ClientHost clientAddress=$ClientAddress serverHost=$ServerHost serverAddress=$TargetAddress",
         "protocols=$($Protocols -join ',') tlsVersions=$($TLSVersions -join ',') alpn=$HTTP1ALPN tls11Cipher=$TLS11Cipher tls12Cipher=$TLS12Cipher connections=$Connections messages=$Messages warmupMessages=$WarmupMessages targetRate=$TargetRate latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds frameworks=$($Frameworks -join ',')",
-        "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyReadBufferSize=$GnalloyReadBufferSize gnalloyMaxMessagesPerRead=$GnalloyMaxMessagesPerRead gnalloyEventBatchSize=$GnalloyEventBatchSize gnalloyFlushStrategy=$GnalloyFlushStrategy gnalloyHTTP1Pipeline=tcp+channel+codec-http1+handler performanceGovernor=$SetPerformanceGovernor",
+        "clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs eventLoops=$EventLoops gnalloyWorkers=$GnalloyWorkers gnalloyReadBufferSize=$GnalloyReadBufferSize gnalloyMaxMessagesPerRead=$GnalloyMaxMessagesPerRead gnalloyEventBatchSize=$GnalloyEventBatchSize gnalloyFlushStrategyPolicy=$GnalloyFlushStrategy gnalloyHTTP1Pipeline=tcp+channel+codec-http1+handler performanceGovernor=$SetPerformanceGovernor",
         "unsupportedFrameworks=gnet,netpoll status=N/A reason=no-framework-http-codec"
     ) -Encoding utf8
     $serverMetadataCommand = @'

@@ -18,7 +18,7 @@ GNALLOY_WORKERS="${GNALLOY_WORKERS:-3}"
 GNALLOY_READ_BUFFER_SIZE="${GNALLOY_READ_BUFFER_SIZE:-4096}"
 GNALLOY_MAX_MESSAGES_PER_READ="${GNALLOY_MAX_MESSAGES_PER_READ:-32}"
 GNALLOY_EVENT_BATCH_SIZE="${GNALLOY_EVENT_BATCH_SIZE:-0}"
-GNALLOY_FLUSH_STRATEGY="${GNALLOY_FLUSH_STRATEGY:-event-loop-batch}"
+GNALLOY_FLUSH_STRATEGY="${GNALLOY_FLUSH_STRATEGY:-auto}"
 GNALLOY_BOSS_CPU_SET="${GNALLOY_BOSS_CPU_SET:-3}"
 GNALLOY_WORKER_CPU_SET="${GNALLOY_WORKER_CPU_SET:-0,1,2}"
 GNALLOY_CPU_PROFILE="${GNALLOY_CPU_PROFILE:-}"
@@ -93,6 +93,13 @@ require_nonnegative_integer GNALLOY_EVENT_BATCH_SIZE "${GNALLOY_EVENT_BATCH_SIZE
 if [[ "${PROTOCOL}" != "http1" && "${PROTOCOL}" != "https1" ]]; then
   printf 'unsupported HTTP/1 family protocol: %s\n' "${PROTOCOL}" >&2
   exit 1
+fi
+if [[ "${GNALLOY_FLUSH_STRATEGY}" == "auto" ]]; then
+  if [[ "${PROTOCOL}" == "https1" ]]; then
+    GNALLOY_FLUSH_STRATEGY="immediate"
+  else
+    GNALLOY_FLUSH_STRATEGY="event-loop-batch"
+  fi
 fi
 case "${GNALLOY_FLUSH_STRATEGY}" in
   immediate|read-complete|event-loop-batch) ;;

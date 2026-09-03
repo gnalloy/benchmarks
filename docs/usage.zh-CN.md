@@ -33,6 +33,16 @@ import "gnalloy.org/benchmarks"
 
 Linux 矩阵覆盖 TCP、UDP、QUIC stream、HTTP/1.1、HTTP/2、HTTP/3、HTTPS TLS 1.1/1.2/1.3、Gnalloy、Netty、gnet、fasthttp 与 netpoll。非法或不支持的组合会记录为 skipped scenario，并保留明确原因。可执行场景向 harness 传入 15 分钟 timeout，并使用 16 分钟外层场景保护。
 
+## 跨主机 HTTP/1 测试
+
+在 Debian `172.16.8.172` 上运行统一 HTTP/1 客户端，并在 Debian `172.16.8.171` 上严格串行启动各服务端：
+
+```powershell
+.\scripts\run-cross-host-http1-common-client.ps1
+```
+
+运行器使用 Gnalloy 的真实 TCP transport、channel pipeline、HTTP/1 codec、启用 TLS 时的 TLS handler 和应用 handler。默认 `auto` flush 策略对明文 HTTP/1 使用 event-loop 批量写，对 HTTPS/1 使用 immediate。明文路径受益于 write batching，TLS pipeline 已在加密前合并小响应，直接 flush 可避免额外的 event-loop tail 延迟。可通过 `-GnalloyFlushStrategy` 对所有案例强制使用同一种公开 channel 策略。gnet 与 netpoll 都不提供 HTTP codec，因此报告为 `N/A`；benchmark 不会自行添加解析器或固定响应旁路。
+
 ## Linux TCP 专项测试
 
 构建 `external/bin/gnalloy-bench` 和 `external/bin/netpoll-bench` 后，在同一台 Linux 主机执行：

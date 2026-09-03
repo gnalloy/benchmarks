@@ -353,9 +353,6 @@ function Resolve-GnalloyFlushStrategy {
     if ($GnalloyFlushStrategy -ne "auto") {
         return $GnalloyFlushStrategy
     }
-    if ($Protocol -eq "https1") {
-        return "immediate"
-    }
     return "read-complete"
 }
 

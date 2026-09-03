@@ -95,11 +95,7 @@ if [[ "${PROTOCOL}" != "http1" && "${PROTOCOL}" != "https1" ]]; then
   exit 1
 fi
 if [[ "${GNALLOY_FLUSH_STRATEGY}" == "auto" ]]; then
-  if [[ "${PROTOCOL}" == "https1" ]]; then
-    GNALLOY_FLUSH_STRATEGY="immediate"
-  else
-    GNALLOY_FLUSH_STRATEGY="read-complete"
-  fi
+  GNALLOY_FLUSH_STRATEGY="read-complete"
 fi
 case "${GNALLOY_FLUSH_STRATEGY}" in
   immediate|read-complete|event-loop-batch) ;;

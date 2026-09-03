@@ -14,6 +14,8 @@ param(
     [int]$EventLoops = 3,
     [int]$GnalloyWorkers = 3,
     [int]$GnalloyMaxMessagesPerRead = 32,
+    [ValidateSet("http2", "https2-tls12", "https2-tls13")]
+    [string[]]$Scenarios = @("http2", "https2-tls12", "https2-tls13"),
     [int[]]$Payloads = @(128, 1024),
     [int]$Connections = 64,
     [int]$Messages = 20000,
@@ -177,9 +179,15 @@ function Invoke-Client {
 }
 
 function Get-ProtocolCases {
-    [pscustomobject]@{ Protocol = "http2"; TLSVersion = "" }
-    [pscustomobject]@{ Protocol = "https2"; TLSVersion = "1.2" }
-    [pscustomobject]@{ Protocol = "https2"; TLSVersion = "1.3" }
+    if ($Scenarios -contains "http2") {
+        [pscustomobject]@{ Protocol = "http2"; TLSVersion = "" }
+    }
+    if ($Scenarios -contains "https2-tls12") {
+        [pscustomobject]@{ Protocol = "https2"; TLSVersion = "1.2" }
+    }
+    if ($Scenarios -contains "https2-tls13") {
+        [pscustomobject]@{ Protocol = "https2"; TLSVersion = "1.3" }
+    }
 }
 
 function Get-RotatedFrameworks {
@@ -193,7 +201,7 @@ function Get-RotatedFrameworks {
 foreach ($value in @($ServerHost, $ClientHost, $SSHUser, $ServerRepo, $ServerBindAddress, $TargetAddress, $ServerCPUSet, $ClientCPUSet, $GnalloyBench, $HertzBench, $NettyBenchJar, $ClientBench)) {
     Assert-SafeValue -Name "parameter" -Value $value
 }
-if ($Connections -le 0 -or $Messages -le 0 -or $WarmupMessages -lt 0 -or $LatencySampleRate -lt 0 -or $Repetitions -le 0 -or $CooldownSeconds -lt 0 -or $GnalloyMaxMessagesPerRead -le 0) {
+if ($Scenarios.Count -eq 0 -or $Connections -le 0 -or $Messages -le 0 -or $WarmupMessages -lt 0 -or $LatencySampleRate -lt 0 -or $Repetitions -le 0 -or $CooldownSeconds -lt 0 -or $GnalloyMaxMessagesPerRead -le 0) {
     throw "Load parameters are out of range"
 }
 foreach ($payload in $Payloads) {
@@ -221,7 +229,7 @@ try {
     Set-Content -LiteralPath $Output -Value @(
         "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
         "crossHost=true serverHost=$ServerHost clientHost=$ClientHost target=$TargetAddress",
-        "protocols=http2,https2 tlsVersions=1.2,1.3 payloads=$($Payloads -join ',') connections=$Connections messages=$Messages warmupMessages=$WarmupMessages latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds",
+        "scenarios=$($Scenarios -join ',') payloads=$($Payloads -join ',') connections=$Connections messages=$Messages warmupMessages=$WarmupMessages latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds",
         "serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs gnalloyMaxMessagesPerRead=$GnalloyMaxMessagesPerRead commonClient=gnalloy-tcp+handler-tls+codec-http2 performanceGovernor=$SetPerformanceGovernor",
         "unsupportedFrameworks=gnet,netpoll,fasthttp status=N/A reason=no-native-http2-codec"
     ) -Encoding utf8

@@ -16,6 +16,8 @@ type quicStreamServer struct {
 	listener quic.Listener
 	payload  int
 	codec    application.LengthPrefixedCodec
+	buffers  sync.Pool
+	executor *quicStreamExecutor
 	ctx      context.Context
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
@@ -50,6 +52,11 @@ func startQUICStreamServer(parent context.Context, cfg config) (*quicStreamServe
 		ctx:      ctx,
 		cancel:   cancel,
 	}
+	server.buffers.New = func() any {
+		buffer := make([]byte, cfg.Payload+2)
+		return &buffer
+	}
+	server.executor = newQUICStreamExecutor(ctx, cfg.Connections, quicStreamQueueSize(cfg.Connections), server.serveStream)
 	server.wg.Add(1)
 	go server.accept()
 	return server, nil
@@ -66,6 +73,7 @@ func (s *quicStreamServer) stop() {
 		_ = s.listener.Close()
 	}
 	s.wg.Wait()
+	s.executor.stop()
 }
 
 func (s *quicStreamServer) accept() {
@@ -88,21 +96,25 @@ func (s *quicStreamServer) serveConn(conn quic.Connection) {
 		if err != nil {
 			return
 		}
-		s.wg.Add(1)
-		go s.serveStream(stream)
+		if !s.executor.submit(stream) {
+			stream.CancelRead(0)
+			stream.CancelWrite(0)
+			return
+		}
 	}
 }
 
 func (s *quicStreamServer) serveStream(stream quic.Stream) {
-	defer s.wg.Done()
-	buffer := make([]byte, s.payload)
-	payload, err := s.codec.ReadFrameInto(stream, buffer)
+	bufferPointer := s.buffers.Get().(*[]byte)
+	buffer := (*bufferPointer)[:s.payload+2]
+	defer s.buffers.Put(bufferPointer)
+	payload, err := s.codec.ReadFrameInto(stream, buffer[2:])
 	if err != nil {
 		stream.CancelRead(0)
 		stream.CancelWrite(0)
 		return
 	}
-	if err := s.codec.WriteFrame(stream, payload); err != nil {
+	if err := s.codec.WriteFrameInto(stream, payload, buffer); err != nil {
 		stream.CancelWrite(0)
 		return
 	}

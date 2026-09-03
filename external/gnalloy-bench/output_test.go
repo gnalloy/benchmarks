@@ -30,6 +30,7 @@ func TestWriteBenchmarkResult(t *testing.T) {
 		Connections:              1,
 		Messages:                 2,
 		LatencySampleRate:        1,
+		TargetRate:               60000,
 		WarmupMessages:           3,
 	}, benchResult{
 		TotalRequests: 2,
@@ -45,6 +46,8 @@ func TestWriteBenchmarkResult(t *testing.T) {
 			P999:    200 * time.Microsecond,
 			Max:     200 * time.Microsecond,
 		},
+		ScheduleDelay: latencySummary{Samples: 2, P99: 50 * time.Microsecond},
+		RoundTrip:     latencySummary{Samples: 2, P99: 150 * time.Microsecond},
 		Resources: resourceDelta{
 			RSSBytes:       4096,
 			HeapAllocBytes: 2048,
@@ -56,7 +59,7 @@ func TestWriteBenchmarkResult(t *testing.T) {
 		},
 	})
 	text := out.String()
-	for _, want := range []string{"framework=gnalloy", "backend=std", "tcpEchoMode=owner-executor", "tcpEchoExecutorWorkers=3", "tcpEchoExecutorQueueSize=11", "boss=1", "workers=2", "readBufferSize=4096", "maxMessagesPerRead=5", "eventBatchSize=7", "bossCPUs=0", "workerCPUs=1,2", "tlsVersion=1.2", "cipherSuites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "negotiatedProtocol=http/1.1", "latencySampleRate=1", "warmupMessages=3", "latencySamples=2", "p99LatencyNs=200000", "rssBytes=4096", "gcCount=1", "total=2", "BenchmarkGnalloyTCPEcho-", "2 2000 ns/op"} {
+	for _, want := range []string{"framework=gnalloy", "backend=std", "tcpEchoMode=owner-executor", "tcpEchoExecutorWorkers=3", "tcpEchoExecutorQueueSize=11", "boss=1", "workers=2", "readBufferSize=4096", "maxMessagesPerRead=5", "eventBatchSize=7", "bossCPUs=0", "workerCPUs=1,2", "tlsVersion=1.2", "cipherSuites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "negotiatedProtocol=http/1.1", "targetRate=60000", "latencySampleRate=1", "warmupMessages=3", "latencySamples=2", "p99LatencyNs=200000", "scheduleDelaySamples=2", "p99ScheduleDelayNs=50000", "roundTripLatencySamples=2", "p99RoundTripLatencyNs=150000", "rssBytes=4096", "gcCount=1", "total=2", "BenchmarkGnalloyTCPEcho-", "2 2000 ns/op"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("missing %q in %q", want, text)
 		}

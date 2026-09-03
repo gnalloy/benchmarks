@@ -629,6 +629,30 @@ func TestParseConfigRejectsNegativeLatencySampleRate(t *testing.T) {
 	}
 }
 
+func TestParseConfigSupportsTargetRate(t *testing.T) {
+	cfg, err := parseConfig([]string{"-protocol", "http2", "-target-rate", "60000"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.TargetRate != 60000 {
+		t.Fatalf("targetRate=%d, want 60000", cfg.TargetRate)
+	}
+}
+
+func TestParseConfigRejectsNegativeTargetRate(t *testing.T) {
+	_, err := parseConfig([]string{"-protocol", "http2", "-target-rate", "-1"})
+	if !errors.Is(err, errInvalidConfig) {
+		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
+	}
+}
+
+func TestParseConfigRejectsUnsupportedTargetRateProtocol(t *testing.T) {
+	_, err := parseConfig([]string{"-protocol", "udp-echo", "-target-rate", "100"})
+	if !errors.Is(err, errInvalidConfig) {
+		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
+	}
+}
+
 func TestParseConfigRejectsNegativeWarmupMessages(t *testing.T) {
 	_, err := parseConfig([]string{"-warmup-messages", "-1"})
 	if !errors.Is(err, errInvalidConfig) {

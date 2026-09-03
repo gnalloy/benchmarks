@@ -21,6 +21,7 @@ param(
     [int]$Messages = 20000,
     [int]$WarmupMessages = 1000,
     [int]$LatencySampleRate = 64,
+    [long]$TargetRate = 0,
     [int]$Repetitions = 5,
     [int]$CooldownSeconds = 5,
     [bool]$SetPerformanceGovernor = $true,
@@ -38,7 +39,8 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($Output)) {
-    $Output = Join-Path $repoRoot "reports/raw/linux-cross-host-http2-saturation.out"
+    $mode = if ($TargetRate -gt 0) { "rate-$TargetRate" } else { "saturation" }
+    $Output = Join-Path $repoRoot "reports/raw/linux-cross-host-http2-$mode.out"
 }
 $remotePIDFile = "/tmp/gnalloy-http2-cross-host.pid"
 $remoteLog = "/tmp/gnalloy-http2-cross-host.log"
@@ -169,7 +171,7 @@ nohup env PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' PAYLOAD='__PAYLO
 
 function Invoke-Client {
     param([string]$Protocol, [string]$TLSVersion, [int]$Payload)
-    $command = "taskset -c '$ClientCPUSet' env GOMAXPROCS='$ClientGoMaxProcs' '$ClientBench' -protocol '$Protocol' -client-only=true -addr '$TargetAddress' -payload '$Payload' -connections '$Connections' -messages '$Messages' -warmup-messages '$WarmupMessages' -latency-sample-rate '$LatencySampleRate' -backend epoll -boss 1 -workers 3 -timeout 5m"
+    $command = "taskset -c '$ClientCPUSet' env GOMAXPROCS='$ClientGoMaxProcs' '$ClientBench' -protocol '$Protocol' -client-only=true -addr '$TargetAddress' -payload '$Payload' -connections '$Connections' -messages '$Messages' -warmup-messages '$WarmupMessages' -latency-sample-rate '$LatencySampleRate' -target-rate '$TargetRate' -backend epoll -boss 1 -workers 3 -timeout 5m"
     if ($Protocol -eq "https2") {
         $command += " -tls-version '$TLSVersion' -alpn h2"
     }
@@ -201,7 +203,7 @@ function Get-RotatedFrameworks {
 foreach ($value in @($ServerHost, $ClientHost, $SSHUser, $ServerRepo, $ServerBindAddress, $TargetAddress, $ServerCPUSet, $ClientCPUSet, $GnalloyBench, $HertzBench, $NettyBenchJar, $ClientBench)) {
     Assert-SafeValue -Name "parameter" -Value $value
 }
-if ($Scenarios.Count -eq 0 -or $Connections -le 0 -or $Messages -le 0 -or $WarmupMessages -lt 0 -or $LatencySampleRate -lt 0 -or $Repetitions -le 0 -or $CooldownSeconds -lt 0 -or $GnalloyMaxMessagesPerRead -le 0) {
+if ($Scenarios.Count -eq 0 -or $Connections -le 0 -or $Messages -le 0 -or $WarmupMessages -lt 0 -or $LatencySampleRate -lt 0 -or $TargetRate -lt 0 -or $Repetitions -le 0 -or $CooldownSeconds -lt 0 -or $GnalloyMaxMessagesPerRead -le 0) {
     throw "Load parameters are out of range"
 }
 foreach ($payload in $Payloads) {
@@ -229,7 +231,7 @@ try {
     Set-Content -LiteralPath $Output -Value @(
         "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
         "crossHost=true serverHost=$ServerHost clientHost=$ClientHost target=$TargetAddress",
-        "scenarios=$($Scenarios -join ',') payloads=$($Payloads -join ',') connections=$Connections messages=$Messages warmupMessages=$WarmupMessages latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds",
+        "scenarios=$($Scenarios -join ',') payloads=$($Payloads -join ',') connections=$Connections messages=$Messages warmupMessages=$WarmupMessages latencySampleRate=$LatencySampleRate targetRate=$TargetRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds",
         "serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs gnalloyMaxMessagesPerRead=$GnalloyMaxMessagesPerRead commonClient=gnalloy-tcp+handler-tls+codec-http2 performanceGovernor=$SetPerformanceGovernor",
         "unsupportedFrameworks=gnet,netpoll,fasthttp status=N/A reason=no-native-http2-codec"
     ) -Encoding utf8

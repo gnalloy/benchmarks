@@ -80,6 +80,17 @@ For diagnosis, select only Gnalloy and capture one probe type per run. Profiles 
 
 The client defaults to CPUs `0,1,2,4`, avoiding its NIC IRQ on CPU 11 and using four distinct physical cores. The runner saves each host's CPU governors, selects `performance` for the run, and restores every original value during cleanup. Cross-host results include both NICs, the switch, and both operating-system network stacks. Keep them separate from same-host CPU-isolated results.
 
+## Cross-host HTTP/2 Benchmark
+
+Run the shared Gnalloy HTTP/2 client on Debian `172.16.8.172` against each server on Debian `172.16.8.171`. Cases and frameworks run serially. A zero target rate measures saturation; a positive rate measures all servers at the same aggregate offered load:
+
+```powershell
+.\scripts\run-cross-host-http2-common-client.ps1
+.\scripts\run-cross-host-http2-common-client.ps1 -TargetRate 60000
+```
+
+For fixed-rate runs, `latency` covers scheduled send time through response completion, `scheduleDelay` covers client-side dispatch delay, and `roundTripLatency` covers actual send through response completion. Use `roundTripLatency` to compare the network, protocol stack, codec, handler, and server processing path; keep `scheduleDelay` visible to identify client backlog. HTTP/2 over TLS supports TLS 1.2 and TLS 1.3. gnet, netpoll, and fasthttp are reported as `N/A` because their benchmark servers do not provide native HTTP/2 codecs.
+
 ## API Selection
 
 Use the API inventory to choose the exact constructor or option type for your protocol path:

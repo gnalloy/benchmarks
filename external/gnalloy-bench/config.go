@@ -45,6 +45,7 @@ type config struct {
 	IOUringMultishotAccept    bool
 	IOUringSQPoll             bool
 	LatencySampleRate         int
+	TargetRate                int64
 	WarmupMessages            int
 	CPUProfile                string
 	AllocProfile              string
@@ -105,6 +106,7 @@ func parseConfig(args []string) (config, error) {
 	fs.BoolVar(&cfg.IOUringMultishotAccept, "iouring-multishot-accept", cfg.IOUringMultishotAccept, "enable io_uring multishot accept")
 	fs.BoolVar(&cfg.IOUringSQPoll, "iouring-sqpoll", cfg.IOUringSQPoll, "enable io_uring SQPOLL")
 	fs.IntVar(&cfg.LatencySampleRate, "latency-sample-rate", cfg.LatencySampleRate, "record one round-trip latency sample every N messages per connection; 0 disables latency sampling")
+	fs.Int64Var(&cfg.TargetRate, "target-rate", cfg.TargetRate, "aggregate target requests per second; 0 runs without pacing")
 	fs.IntVar(&cfg.WarmupMessages, "warmup-messages", cfg.WarmupMessages, "messages per connection sent before timed measurement; 0 disables in-process warmup")
 	fs.StringVar(&cfg.CPUProfile, "cpuprofile", cfg.CPUProfile, "write Go CPU profile to this file")
 	fs.StringVar(&cfg.AllocProfile, "allocprofile", cfg.AllocProfile, "write Go allocation profile to this file on exit")
@@ -246,6 +248,12 @@ func (c config) validate() error {
 	}
 	if c.LatencySampleRate < 0 {
 		return fmt.Errorf("%w: latency-sample-rate must not be negative", errInvalidConfig)
+	}
+	if c.TargetRate < 0 {
+		return fmt.Errorf("%w: target-rate must not be negative", errInvalidConfig)
+	}
+	if c.TargetRate > 0 && c.Protocol != "http1" && c.Protocol != "https1" && c.Protocol != "http2" && c.Protocol != "https2" {
+		return fmt.Errorf("%w: target-rate currently requires an HTTP/1 or HTTP/2 protocol", errInvalidConfig)
 	}
 	if c.WarmupMessages < 0 {
 		return fmt.Errorf("%w: warmup-messages must not be negative", errInvalidConfig)

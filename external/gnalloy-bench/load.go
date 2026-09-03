@@ -23,6 +23,8 @@ type benchResult struct {
 	NsPerOp       float64
 	Protocol      string
 	Latency       latencySummary
+	ScheduleDelay latencySummary
+	RoundTrip     latencySummary
 	Resources     resourceDelta
 }
 
@@ -79,6 +81,7 @@ func runHTTP1Benchmark(ctx context.Context, cfg config) (benchResult, error) {
 		Messages:          cfg.Messages,
 		Timeout:           cfg.Timeout,
 		LatencySampleRate: cfg.LatencySampleRate,
+		TargetRate:        cfg.TargetRate,
 		WarmupMessages:    cfg.WarmupMessages,
 	}
 	if cfg.Protocol == "https1" {
@@ -104,7 +107,9 @@ func runHTTP1Benchmark(ctx context.Context, cfg config) (benchResult, error) {
 			P999:    result.Latency.P999,
 			Max:     result.Latency.Max,
 		},
-		Resources: resourceDeltaSince(resourcesBefore, captureResourceSnapshot()),
+		ScheduleDelay: latencySummary{Samples: result.ScheduleDelay.Samples, P50: result.ScheduleDelay.P50, P95: result.ScheduleDelay.P95, P99: result.ScheduleDelay.P99, P999: result.ScheduleDelay.P999, Max: result.ScheduleDelay.Max},
+		RoundTrip:     latencySummary{Samples: result.RoundTrip.Samples, P50: result.RoundTrip.P50, P95: result.RoundTrip.P95, P99: result.RoundTrip.P99, P999: result.RoundTrip.P999, Max: result.RoundTrip.Max},
+		Resources:     resourceDeltaSince(resourcesBefore, captureResourceSnapshot()),
 	}
 	return out, err
 }
@@ -128,6 +133,7 @@ func runHTTP2Load(ctx context.Context, cfg config, addr string) (benchResult, er
 		Messages:          cfg.Messages,
 		Timeout:           cfg.Timeout,
 		LatencySampleRate: cfg.LatencySampleRate,
+		TargetRate:        cfg.TargetRate,
 		WarmupMessages:    cfg.WarmupMessages,
 	}
 	if cfg.Protocol == "https2" {
@@ -153,7 +159,9 @@ func runHTTP2Load(ctx context.Context, cfg config, addr string) (benchResult, er
 			P999:    result.Latency.P999,
 			Max:     result.Latency.Max,
 		},
-		Resources: resourceDeltaSince(resourcesBefore, captureResourceSnapshot()),
+		ScheduleDelay: latencySummary{Samples: result.ScheduleDelay.Samples, P50: result.ScheduleDelay.P50, P95: result.ScheduleDelay.P95, P99: result.ScheduleDelay.P99, P999: result.ScheduleDelay.P999, Max: result.ScheduleDelay.Max},
+		RoundTrip:     latencySummary{Samples: result.RoundTrip.Samples, P50: result.RoundTrip.P50, P95: result.RoundTrip.P95, P99: result.RoundTrip.P99, P999: result.RoundTrip.P999, Max: result.RoundTrip.Max},
+		Resources:     resourceDeltaSince(resourcesBefore, captureResourceSnapshot()),
 	}
 	return out, err
 }

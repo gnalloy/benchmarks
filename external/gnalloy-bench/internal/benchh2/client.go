@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"gnalloy.org/benchmarks/internal/loadgen"
 	http2 "gnalloy.org/codec-http2"
 	"gnalloy.org/gnalloy/bootstrap"
 	"gnalloy.org/gnalloy/channel"
@@ -115,7 +116,8 @@ func warmupClients(ctx context.Context, clients []client, cfg Config) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := runClientMessages(ctx, &clients[clientID], cfg.WarmupMessages, 0, startCh, nil, nil)
+			disabledPacer := loadgen.Pacer{}
+			err := runClientMessages(ctx, &clients[clientID], clientID, cfg.WarmupMessages, 0, startCh, &disabledPacer, nil, nil)
 			if err != nil {
 				once.Do(func() { firstErr = err })
 			}
@@ -126,19 +128,39 @@ func warmupClients(ctx context.Context, clients []client, cfg Config) error {
 	return firstErr
 }
 
-func runClientMessages(ctx context.Context, c *client, messageCount int, latencySampleRate int, startCh <-chan struct{}, successes *atomic.Int64, latencySamples *[]int64) error {
+func runClientMessages(ctx context.Context, c *client, clientID int, messageCount int, latencySampleRate int, startCh <-chan struct{}, sharedPacer *loadgen.Pacer, successes *atomic.Int64, samples *clientSamples) error {
 	select {
 	case <-startCh:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+	pacer := *sharedPacer
+	var timer *time.Timer
+	if pacer.Enabled() {
+		timer = time.NewTimer(time.Hour)
+		if !timer.Stop() {
+			<-timer.C
+		}
+		defer timer.Stop()
+	}
 	for i := 0; i < messageCount; i++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		deadline := time.Time{}
+		if pacer.Enabled() {
+			var err error
+			deadline, err = pacer.Wait(ctx, timer, clientID, i)
+			if err != nil {
+				return err
+			}
+		}
 		streamID := c.nextStream
 		c.nextStream += 2
-		recordLatency := latencySamples != nil && shouldRecordLatency(i, latencySampleRate)
-		var requestStarted time.Time
+		recordLatency := samples != nil && shouldRecordLatency(i, latencySampleRate)
+		var sendStarted time.Time
 		if recordLatency {
-			requestStarted = time.Now()
+			sendStarted = time.Now()
 		}
 		request := http2.HeadersBlock{StreamID: streamID, Fields: c.fields, EndStream: true}
 		if err := c.channel.WriteAndFlush(request); err != nil {
@@ -156,7 +178,15 @@ func runClientMessages(ctx context.Context, c *client, messageCount int, latency
 			return ctx.Err()
 		}
 		if recordLatency {
-			*latencySamples = append(*latencySamples, elapsedLatencyNanos(requestStarted))
+			completedAt := time.Now()
+			roundTrip := positiveLatencyNanos(completedAt.Sub(sendStarted))
+			samples.roundTrip = append(samples.roundTrip, roundTrip)
+			if pacer.Enabled() {
+				samples.total = append(samples.total, positiveLatencyNanos(completedAt.Sub(deadline)))
+				samples.scheduleDelay = append(samples.scheduleDelay, nonNegativeLatencyNanos(sendStarted.Sub(deadline)))
+			} else {
+				samples.total = append(samples.total, roundTrip)
+			}
 		}
 		if successes != nil {
 			successes.Add(1)

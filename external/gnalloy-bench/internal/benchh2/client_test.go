@@ -59,6 +59,34 @@ func TestRunLoadHTTP2Cleartext(t *testing.T) {
 	}
 }
 
+func TestRunLoadHTTP2PacesAggregateTargetRate(t *testing.T) {
+	var requests atomic.Int64
+	server := httptest.NewServer(h2c.NewHandler(benchmarkHandler(t, 16, &requests), &xhttp2.Server{}))
+	defer server.Close()
+
+	result, err := RunLoad(context.Background(), Config{
+		Addr:              serverAddress(t, server.URL),
+		Payload:           16,
+		Connections:       1,
+		Messages:          3,
+		LatencySampleRate: 1,
+		TargetRate:        100,
+		Timeout:           5 * time.Second,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Elapsed < 20*time.Millisecond {
+		t.Fatalf("elapsed=%s, want at least 20ms", result.Elapsed)
+	}
+	if result.Latency.Samples != 3 || result.ScheduleDelay.Samples != 3 || result.RoundTrip.Samples != 3 {
+		t.Fatalf("result=%+v", result)
+	}
+	if result.Latency.P50 <= 0 || result.RoundTrip.P50 <= 0 || result.ScheduleDelay.P50 < 0 {
+		t.Fatalf("result=%+v", result)
+	}
+}
+
 func TestRunLoadHTTP2MoreConnectionsThanEventLoops(t *testing.T) {
 	previous := runtime.GOMAXPROCS(2)
 	defer runtime.GOMAXPROCS(previous)

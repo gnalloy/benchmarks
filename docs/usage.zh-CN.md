@@ -80,6 +80,17 @@ TARGET_RATE=60000 ./scripts/run-linux-udp-common-client.sh
 
 客户端默认绑定 `0,1,2,4`，避开 CPU 11 上的网卡 IRQ，并使用四个不同物理核。runner 会保存两端每个 CPU 的 governor，测试期间切换为 `performance`，清理阶段恢复全部原值。跨机结果包含两端网卡、交换链路和两端操作系统网络栈的成本，必须与同机物理核隔离结果分开报告。
 
+## 跨机 HTTP/2 测试
+
+在 Debian `172.16.8.172` 上运行统一 Gnalloy HTTP/2 客户端，依次测试 Debian `172.16.8.171` 上的各服务端。所有案例和框架严格串行执行。目标速率为零时测量饱和吞吐，目标速率为正数时按相同聚合 offered load 对比各服务端：
+
+```powershell
+.\scripts\run-cross-host-http2-common-client.ps1
+.\scripts\run-cross-host-http2-common-client.ps1 -TargetRate 60000
+```
+
+固定速率模式下，`latency` 表示从计划发送时刻到响应完成，`scheduleDelay` 表示客户端调度发送的滞后，`roundTripLatency` 表示从实际发送到响应完成。对比网络、协议栈、codec、handler 和服务端处理路径时使用 `roundTripLatency`，同时保留 `scheduleDelay` 识别客户端积压。HTTP/2 over TLS 仅测试 TLS 1.2 和 TLS 1.3。gnet、netpoll 和 fasthttp 的 benchmark 服务端没有原生 HTTP/2 codec，因此明确记录为 `N/A`。
+
 ## API 选择
 
 通过 API 清单选择当前协议路径需要的具体构造函数或 option 类型：

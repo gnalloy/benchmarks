@@ -18,6 +18,7 @@ type Config struct {
 	Messages          int
 	Timeout           time.Duration
 	LatencySampleRate int
+	TargetRate        int64
 	WarmupMessages    int
 	TLS               *tls.Config
 }
@@ -31,6 +32,8 @@ type Result struct {
 	NsPerOp            float64
 	NegotiatedProtocol string
 	Latency            LatencySummary
+	ScheduleDelay      LatencySummary
+	RoundTrip          LatencySummary
 }
 
 // LatencySummary 汇总采样到的单 stream 往返延迟。
@@ -59,6 +62,9 @@ func (c Config) Validate() error {
 	}
 	if c.LatencySampleRate < 0 {
 		return fmt.Errorf("benchh2: latency-sample-rate must not be negative")
+	}
+	if c.TargetRate < 0 {
+		return fmt.Errorf("benchh2: target-rate must not be negative")
 	}
 	if c.WarmupMessages < 0 {
 		return fmt.Errorf("benchh2: warmup-messages must not be negative")

@@ -12,6 +12,8 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 gnalloy.org/benchmarks v0.0.0-20260902210848-86a78a44ee7c h1:vWBLJKv3P09BVOZ/blQWNr0iMaMMTfNYRwcWg2Y/UHM=
 gnalloy.org/benchmarks v0.0.0-20260902210848-86a78a44ee7c/go.mod h1:n+lK3FcURLYXTfwzUykPL3ptB0sL7FMggNx35dXahb8=
+gnalloy.org/benchmarks v0.0.0-20260903124510-211aa714781e h1:Es157+oSWiFCQ+OSNl/LYTys71pawKTAV5nJ0v06w4o=
+gnalloy.org/benchmarks v0.0.0-20260903124510-211aa714781e/go.mod h1:PHgi71mh9VMMrITQ4nGswwjQAgAHj6X86KZ9+TsUvjA=
 gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98 h1:Hilym9O+lbWeRljPkltt4qPTVuvpHJ8AnPEnJbxDItw=
 gnalloy.org/codec-compression v0.0.0-20260831155050-e50fc657ce98/go.mod h1:Y5Bk5clhC0i3lilHSjH1bxmc0Ls7fRqSvYf5mV0PXUw=
 gnalloy.org/codec-http1 v0.0.0-20260903004805-2018cdfc650d h1:BL3F9/29ejId3lIwWRJ194yNj9dzrJLIHotvPnjcAXs=

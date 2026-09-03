@@ -43,6 +43,7 @@ func bindHTTP2Server(ctx context.Context, cfg config, boss *transport.EventLoopG
 	return bootstrap.NewServerBootstrap().
 		Group(boss, workers).
 		Transport(tcp.NewTransport(tcpConfig)).
+		ChildOption(benchmarkChildOptions(cfg)...).
 		ChildInitializer(func(ch channel.Channel) error {
 			if cfg.Protocol == "https2" {
 				tlsConfig, err := serverTLSConfig(cfg)

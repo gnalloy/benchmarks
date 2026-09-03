@@ -147,7 +147,7 @@ func runClientMessages(ctx context.Context, c *client, messageCount int, latency
 		select {
 		case response := <-c.response.responses:
 			if response.err != nil {
-				return response.err
+				return fmt.Errorf("benchh2: stream %d response: %w", streamID, response.err)
 			}
 			if response.streamID != streamID {
 				return fmt.Errorf("benchh2: response stream %d, want %d", response.streamID, streamID)

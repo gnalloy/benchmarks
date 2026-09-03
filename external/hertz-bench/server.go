@@ -42,10 +42,7 @@ func startServer(cfg config) (*benchmarkServer, error) {
 		options = append(options, server.WithALPN(true), server.WithTLS(tlsConfig))
 	}
 	engine := server.New(options...)
-	engine.AddProtocol("h2", factory.NewServerFactory(
-		http2config.WithReadTimeout(cfg.Timeout),
-		http2config.WithDisableKeepAlive(false),
-	))
+	engine.AddProtocol("h2", factory.NewServerFactory(http2ServerOptions(cfg.Timeout)...))
 	engine.GET("/bench", func(_ context.Context, ctx *app.RequestContext) {
 		ctx.SetStatusCode(consts.StatusOK)
 		ctx.SetContentType("application/octet-stream")
@@ -67,6 +64,14 @@ func startServer(cfg config) (*benchmarkServer, error) {
 		return nil, fmt.Errorf("hertz-bench: start server: %w", err)
 	case <-time.After(20 * time.Millisecond):
 		return result, nil
+	}
+}
+
+func http2ServerOptions(timeout time.Duration) []http2config.Option {
+	return []http2config.Option{
+		http2config.WithReadTimeout(timeout),
+		http2config.WithIdleTimeout(timeout),
+		http2config.WithDisableKeepAlive(false),
 	}
 }
 

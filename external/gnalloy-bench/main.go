@@ -39,11 +39,27 @@ func runCLI(args []string, stdout io.Writer) error {
 	if cfg.ServerOnly {
 		return runServerOnly(context.Background(), cfg, stdout)
 	}
+	if cfg.ClientOnly {
+		result, err := runClientOnly(context.Background(), cfg)
+		if result.TotalRequests > 0 {
+			writeBenchmarkResult(stdout, cfg, result)
+		}
+		return err
+	}
 	result, err := runBenchmark(context.Background(), cfg)
 	if result.TotalRequests > 0 {
 		writeBenchmarkResult(stdout, cfg, result)
 	}
 	return err
+}
+
+func runClientOnly(ctx context.Context, cfg config) (benchResult, error) {
+	switch cfg.Protocol {
+	case "http2", "https2":
+		return runHTTP2Load(ctx, cfg, cfg.Addr)
+	default:
+		return benchResult{}, fmt.Errorf("%w: client-only does not support %s", errInvalidConfig, cfg.Protocol)
+	}
 }
 
 func runServerOnly(ctx context.Context, cfg config, stdout io.Writer) error {

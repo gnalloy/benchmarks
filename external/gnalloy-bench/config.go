@@ -55,6 +55,7 @@ type config struct {
 	CipherSuiteIDs            []uint16
 	AllowInsecureCipherSuites bool
 	ServerOnly                bool
+	ClientOnly                bool
 }
 
 func parseConfig(args []string) (config, error) {
@@ -113,6 +114,7 @@ func parseConfig(args []string) (config, error) {
 	fs.StringVar(&cfg.CipherSuites, "cipher-suites", cfg.CipherSuites, "comma-separated TLS cipher suites using IANA/Java, OpenSSL or hexadecimal names")
 	fs.BoolVar(&cfg.AllowInsecureCipherSuites, "allow-insecure-cipher-suites", cfg.AllowInsecureCipherSuites, "allow legacy cipher suites flagged insecure by the Go runtime")
 	fs.BoolVar(&cfg.ServerOnly, "server-only", cfg.ServerOnly, "run only the benchmark server")
+	fs.BoolVar(&cfg.ClientOnly, "client-only", cfg.ClientOnly, "run only the benchmark client")
 	if err := fs.Parse(args); err != nil {
 		return config{}, err
 	}
@@ -251,8 +253,14 @@ func (c config) validate() error {
 	if c.Protocol == "https2" && c.TLSVersion == tlsVersion11 {
 		return fmt.Errorf("%w: HTTP/2 over TLS requires TLS 1.2 or newer", errInvalidConfig)
 	}
-	if c.ServerOnly && c.Protocol != "udp-echo" && c.Protocol != "http1" && c.Protocol != "https1" && c.Protocol != "http2" && c.Protocol != "https2" {
+	if c.ServerOnly && c.ClientOnly {
+		return fmt.Errorf("%w: server-only and client-only are mutually exclusive", errInvalidConfig)
+	}
+	if c.ServerOnly && !supportsServerOnly(c.Protocol) {
 		return fmt.Errorf("%w: server-only requires udp-echo, http1, https1, http2 or https2 protocol", errInvalidConfig)
+	}
+	if c.ClientOnly && c.Protocol != "http2" && c.Protocol != "https2" {
+		return fmt.Errorf("%w: client-only requires http2 or https2 protocol", errInvalidConfig)
 	}
 	if c.Protocol == "http3" {
 		return ensureHTTP3Config(c)
@@ -261,6 +269,15 @@ func (c config) validate() error {
 		return ensureQUICStreamConfig(c)
 	}
 	return nil
+}
+
+func supportsServerOnly(protocol string) bool {
+	switch protocol {
+	case "udp-echo", "http1", "https1", "http2", "https2":
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *config) resolveCipherSuites() error {

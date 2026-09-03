@@ -115,10 +115,13 @@ func runHTTP2Benchmark(ctx context.Context, cfg config) (benchResult, error) {
 		return benchResult{}, err
 	}
 	defer server.stop()
+	return runHTTP2Load(ctx, cfg, server.addr)
+}
 
+func runHTTP2Load(ctx context.Context, cfg config, addr string) (benchResult, error) {
 	resourcesBefore := captureResourceSnapshot()
 	h2Config := benchh2.Config{
-		Addr:              server.addr,
+		Addr:              addr,
 		ServerName:        tlsServerName(),
 		Payload:           cfg.Payload,
 		Connections:       cfg.Connections,

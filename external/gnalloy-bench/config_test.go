@@ -378,6 +378,27 @@ func TestParseConfigSupportsHTTP2ServerOnly(t *testing.T) {
 	}
 }
 
+func TestParseConfigSupportsHTTP2ClientOnly(t *testing.T) {
+	for _, protocol := range []string{"http2", "https2"} {
+		t.Run(protocol, func(t *testing.T) {
+			cfg, err := parseConfig([]string{"-protocol", protocol, "-client-only=true"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cfg.ClientOnly {
+				t.Fatal("client-only=false, want true")
+			}
+		})
+	}
+}
+
+func TestParseConfigRejectsConflictingStandaloneModes(t *testing.T) {
+	_, err := parseConfig([]string{"-protocol", "http2", "-server-only=true", "-client-only=true"})
+	if !errors.Is(err, errInvalidConfig) {
+		t.Fatalf("err=%v, want %v", err, errInvalidConfig)
+	}
+}
+
 func TestRunServerOnlyHTTPS1(t *testing.T) {
 	cfg, err := parseConfig([]string{
 		"-protocol", "https1",
@@ -421,6 +442,37 @@ func TestRunServerOnlyHTTP2(t *testing.T) {
 	}
 	if !strings.Contains(output.String(), "serverReady=true framework=gnalloy protocol=http2") {
 		t.Fatalf("output=%q", output.String())
+	}
+}
+
+func TestRunClientOnlyHTTP2(t *testing.T) {
+	serverConfig, err := parseConfig([]string{
+		"-protocol", "http2",
+		"-addr", "127.0.0.1:0",
+		"-payload", "16",
+		"-connections", "1",
+		"-messages", "1",
+		"-boss", "1",
+		"-workers", "1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := startHTTP2Server(context.Background(), serverConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.stop()
+
+	clientConfig := serverConfig
+	clientConfig.ClientOnly = true
+	clientConfig.Addr = server.addr
+	result, err := runClientOnly(context.Background(), clientConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TotalRequests != 1 || result.Errors != 0 {
+		t.Fatalf("result=%+v, want one successful request", result)
 	}
 }
 

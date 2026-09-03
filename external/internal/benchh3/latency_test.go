@@ -5,18 +5,17 @@ import (
 	"time"
 )
 
-func TestAverageLatencyNanosUsesWindowMean(t *testing.T) {
-	got := averageLatencyNanos(640*time.Microsecond, 64)
-	if got != 10000 {
-		t.Fatalf("latency=%d, want 10000", got)
+func TestPositiveLatencyNanosKeepsPositiveFloor(t *testing.T) {
+	if got := positiveLatencyNanos(0); got != 1 {
+		t.Fatalf("latency=%d, want positive lower bound", got)
+	}
+	if got := positiveLatencyNanos(time.Nanosecond); got != 1 {
+		t.Fatalf("latency=%d, want positive lower bound", got)
 	}
 }
 
-func TestAverageLatencyNanosKeepsPositiveFloor(t *testing.T) {
-	if got := averageLatencyNanos(0, 64); got != 1 {
-		t.Fatalf("latency=%d, want positive lower bound", got)
-	}
-	if got := averageLatencyNanos(time.Nanosecond, 64); got != 1 {
-		t.Fatalf("latency=%d, want positive lower bound", got)
+func TestNonNegativeLatencyNanosClampsEarlySend(t *testing.T) {
+	if got := nonNegativeLatencyNanos(-time.Nanosecond); got != 0 {
+		t.Fatalf("latency=%d, want zero", got)
 	}
 }

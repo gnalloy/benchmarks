@@ -6,6 +6,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"gnalloy.org/benchmarks/internal/loadgen"
 )
 
 // RunLoad 执行 HTTP/3 stream request/response 负载。
@@ -36,10 +38,10 @@ func RunLoad(parent context.Context, cfg Config) (Result, error) {
 		firstErr  error
 		once      sync.Once
 		wg        sync.WaitGroup
-		samples   [][]int64
+		samples   []clientSamples
 	)
 	if latencySamplingEnabled(cfg.LatencySampleRate) {
-		samples = make([][]int64, cfg.Connections)
+		samples = make([]clientSamples, cfg.Connections)
 	}
 	recordError := func(err error) {
 		if err == nil {
@@ -53,20 +55,28 @@ func RunLoad(parent context.Context, cfg Config) (Result, error) {
 	}
 
 	startCh := make(chan struct{})
+	pacer := loadgen.NewPacer(time.Time{}, len(clients), cfg.TargetRate)
+	pacingEnabled := pacer.Enabled()
 	for i := range clients {
 		clientID := i
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			var clientSamples *[]int64
+			var clientSample *clientSamples
 			if samples != nil {
-				samples[clientID] = newLatencySamples(cfg.Messages, cfg.LatencySampleRate)
-				clientSamples = &samples[clientID]
+				capacity := estimateLatencySampleCount(1, cfg.Messages, cfg.LatencySampleRate)
+				samples[clientID].total = make([]int64, 0, capacity)
+				samples[clientID].roundTrip = make([]int64, 0, capacity)
+				if pacingEnabled {
+					samples[clientID].scheduleDelay = make([]int64, 0, capacity)
+				}
+				clientSample = &samples[clientID]
 			}
-			recordError(runClientMessages(ctx, &clients[clientID], cfg.Messages, cfg.LatencySampleRate, startCh, &successes, clientSamples))
+			recordError(runClientMessages(ctx, &clients[clientID], clientID, cfg.Messages, cfg.LatencySampleRate, startCh, &pacer, &successes, clientSample))
 		}()
 	}
 	start := time.Now()
+	pacer.SetStart(start)
 	close(startCh)
 	wg.Wait()
 	elapsed := time.Since(start)
@@ -82,11 +92,9 @@ func RunLoad(parent context.Context, cfg Config) (Result, error) {
 		NegotiatedProtocol: firstNegotiatedProtocol(clients),
 	}
 	if samples != nil {
-		allSamples := make([]int64, 0, estimateLatencySampleCount(cfg.Connections, cfg.Messages, cfg.LatencySampleRate))
-		for _, clientSamples := range samples {
-			allSamples = append(allSamples, clientSamples...)
-		}
-		result.Latency = summarizeLatencySamples(allSamples)
+		result.Latency = summarizeClientSamples(samples, func(sample clientSamples) []int64 { return sample.total })
+		result.ScheduleDelay = summarizeClientSamples(samples, func(sample clientSamples) []int64 { return sample.scheduleDelay })
+		result.RoundTrip = summarizeClientSamples(samples, func(sample clientSamples) []int64 { return sample.roundTrip })
 	}
 	result.Throughput = float64(total) / elapsed.Seconds()
 	if total > 0 {
@@ -125,7 +133,8 @@ func warmupClients(ctx context.Context, clients []client, cfg Config) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			recordError(runClientMessages(ctx, &clients[clientID], cfg.WarmupMessages, cfg.LatencySampleRate, startCh, nil, nil))
+			disabledPacer := loadgen.Pacer{}
+			recordError(runClientMessages(ctx, &clients[clientID], clientID, cfg.WarmupMessages, 0, startCh, &disabledPacer, nil, nil))
 		}()
 	}
 	close(startCh)

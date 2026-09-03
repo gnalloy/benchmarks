@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+type clientSamples struct {
+	total         []int64
+	scheduleDelay []int64
+	roundTrip     []int64
+}
+
 func latencySamplingEnabled(rate int) bool {
 	return rate > 0
 }
@@ -13,62 +19,18 @@ func shouldRecordLatency(messageIndex int, rate int) bool {
 	return rate > 0 && messageIndex%rate == 0
 }
 
-func elapsedLatencyNanos(started time.Time) int64 {
-	elapsed := time.Since(started).Nanoseconds()
-	if elapsed <= 0 {
+func positiveLatencyNanos(value time.Duration) int64 {
+	if value <= 0 {
 		return 1
 	}
-	return elapsed
+	return value.Nanoseconds()
 }
 
-type latencyWindowRecorder struct {
-	samples *[]int64
-	rate    int
-	started time.Time
-	count   int
-}
-
-func newLatencyWindowRecorder(rate int, samples *[]int64) latencyWindowRecorder {
-	if samples == nil || rate <= 0 {
-		return latencyWindowRecorder{}
-	}
-	return latencyWindowRecorder{samples: samples, rate: rate}
-}
-
-func (r *latencyWindowRecorder) begin() {
-	if r.samples == nil {
-		return
-	}
-	if r.count == 0 {
-		r.started = time.Now()
-	}
-	r.count++
-}
-
-func (r *latencyWindowRecorder) finish(last bool) {
-	if r.samples == nil || r.count == 0 {
-		return
-	}
-	if r.count < r.rate && !last {
-		return
-	}
-	*r.samples = append(*r.samples, averageLatencyNanos(time.Since(r.started), r.count))
-	r.count = 0
-}
-
-func averageLatencyNanos(elapsed time.Duration, count int) int64 {
-	if count <= 0 {
+func nonNegativeLatencyNanos(value time.Duration) int64 {
+	if value <= 0 {
 		return 0
 	}
-	nanos := elapsed.Nanoseconds()
-	if nanos <= 0 {
-		return 1
-	}
-	average := nanos / int64(count)
-	if average <= 0 {
-		return 1
-	}
-	return average
+	return value.Nanoseconds()
 }
 
 func newLatencySamples(messages int, rate int) []int64 {
@@ -100,6 +62,18 @@ func summarizeLatencySamples(samples []int64) LatencySummary {
 		P999:    percentileDuration(samples, 0.999),
 		Max:     time.Duration(samples[len(samples)-1]),
 	}
+}
+
+func summarizeClientSamples(samples []clientSamples, values func(clientSamples) []int64) LatencySummary {
+	count := 0
+	for _, sample := range samples {
+		count += len(values(sample))
+	}
+	all := make([]int64, 0, count)
+	for _, sample := range samples {
+		all = append(all, values(sample)...)
+	}
+	return summarizeLatencySamples(all)
 }
 
 func percentileDuration(sorted []int64, q float64) time.Duration {

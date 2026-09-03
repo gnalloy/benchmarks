@@ -5,7 +5,9 @@ import (
 	"errors"
 	"io"
 	"sync/atomic"
+	"time"
 
+	"gnalloy.org/benchmarks/internal/loadgen"
 	codechttp3 "gnalloy.org/codec-http3"
 	h3transport "gnalloy.org/transport-http3"
 	"gnalloy.org/transport-quic"
@@ -20,24 +22,52 @@ type client struct {
 	alpn     string
 }
 
-func runClientMessages(ctx context.Context, c *client, messageCount int, latencySampleRate int, startCh <-chan struct{}, successes *atomic.Int64, latencySamples *[]int64) error {
+func runClientMessages(ctx context.Context, c *client, clientID int, messageCount int, latencySampleRate int, startCh <-chan struct{}, sharedPacer *loadgen.Pacer, successes *atomic.Int64, samples *clientSamples) error {
 	select {
 	case <-startCh:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-	latencyRecorder := newLatencyWindowRecorder(latencySampleRate, latencySamples)
-	for i := 0; i < messageCount; i++ {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
+	pacer := *sharedPacer
+	var timer *time.Timer
+	if pacer.Enabled() {
+		timer = time.NewTimer(time.Hour)
+		if !timer.Stop() {
+			<-timer.C
 		}
-		latencyRecorder.begin()
+		defer timer.Stop()
+	}
+	for i := 0; i < messageCount; i++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		deadline := time.Time{}
+		if pacer.Enabled() {
+			var err error
+			deadline, err = pacer.Wait(ctx, timer, clientID, i)
+			if err != nil {
+				return err
+			}
+		}
+		recordLatency := samples != nil && shouldRecordLatency(i, latencySampleRate)
+		var sendStarted time.Time
+		if recordLatency {
+			sendStarted = time.Now()
+		}
 		if err := runRequest(ctx, c); err != nil {
 			return err
 		}
-		latencyRecorder.finish(i == messageCount-1)
+		if recordLatency {
+			completedAt := time.Now()
+			roundTrip := positiveLatencyNanos(completedAt.Sub(sendStarted))
+			samples.roundTrip = append(samples.roundTrip, roundTrip)
+			if pacer.Enabled() {
+				samples.total = append(samples.total, positiveLatencyNanos(completedAt.Sub(deadline)))
+				samples.scheduleDelay = append(samples.scheduleDelay, nonNegativeLatencyNanos(sendStarted.Sub(deadline)))
+			} else {
+				samples.total = append(samples.total, roundTrip)
+			}
+		}
 		if successes != nil {
 			successes.Add(1)
 		}

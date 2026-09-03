@@ -58,7 +58,58 @@ func TestRunLoadHTTP3QUIC(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.TotalRequests != 2 || result.Errors != 0 || result.Latency.Samples != 2 || result.NegotiatedProtocol != alpnHTTP3 {
+	if result.TotalRequests != 2 || result.Errors != 0 || result.Latency.Samples != 2 || result.RoundTrip.Samples != 2 || result.NegotiatedProtocol != alpnHTTP3 {
+		t.Fatalf("result=%+v", result)
+	}
+	close(clientDone)
+	<-done
+}
+
+func TestRunLoadHTTP3PacesAggregateTargetRate(t *testing.T) {
+	cert, err := benchtls.SelfSignedCertificate(benchtls.DefaultServerName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	listener, err := quic.ListenAddr("127.0.0.1:0", quic.Config{
+		TLS: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS13,
+			NextProtos:   []string{alpnHTTP3},
+		},
+		NextProtos: []string{alpnHTTP3},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	clientDone := make(chan struct{})
+	done := serveH3(t, ctx, listener, 16, 3, clientDone)
+	result, err := RunLoad(context.Background(), Config{
+		Addr:              listener.Addr().String(),
+		ServerName:        benchtls.DefaultServerName,
+		Payload:           16,
+		Connections:       1,
+		Messages:          3,
+		LatencySampleRate: 1,
+		TargetRate:        100,
+		Timeout:           5 * time.Second,
+		TLS: &tls.Config{
+			ServerName:         benchtls.DefaultServerName,
+			InsecureSkipVerify: true,
+			MinVersion:         tls.VersionTLS13,
+			NextProtos:         []string{alpnHTTP3},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Elapsed < 20*time.Millisecond {
+		t.Fatalf("elapsed=%s, want at least 20ms", result.Elapsed)
+	}
+	if result.Latency.Samples != 3 || result.ScheduleDelay.Samples != 3 || result.RoundTrip.Samples != 3 {
 		t.Fatalf("result=%+v", result)
 	}
 	close(clientDone)

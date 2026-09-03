@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gnalloy.org/transport-quic"
+	"gnalloy.org/transport-quic/application"
 )
 
 type quicStreamClient struct {
@@ -16,6 +17,7 @@ type quicStreamClient struct {
 	payload []byte
 	reply   []byte
 	alpn    string
+	codec   application.LengthPrefixedCodec
 }
 
 func runQUICStreamBenchmark(ctx context.Context, cfg config) (benchResult, error) {
@@ -134,6 +136,7 @@ func prepareQUICStreamClients(ctx context.Context, addr string, cfg config) ([]q
 			payload: makePayload(cfg.Payload, i),
 			reply:   make([]byte, cfg.Payload),
 			alpn:    conn.ConnectionState().TLS.NegotiatedProtocol,
+			codec:   application.LengthPrefixedCodec{MaxFrameSize: cfg.Payload},
 		})
 	}
 	return clients, nil
@@ -250,14 +253,14 @@ func runQUICStreamRequest(ctx context.Context, client quicStreamClient, cfg conf
 	if deadline, ok := ctx.Deadline(); ok {
 		_ = stream.SetDeadline(deadline)
 	}
-	if err := writeQUICStreamFrame(stream, client.payload); err != nil {
+	if err := client.codec.WriteFrame(stream, client.payload); err != nil {
 		stream.CancelWrite(0)
 		return err
 	}
 	if err := stream.Close(); err != nil {
 		return err
 	}
-	reply, err := readQUICStreamFrame(stream, client.reply, cfg.Payload)
+	reply, err := client.codec.ReadFrameInto(stream, client.reply)
 	if err != nil {
 		stream.CancelRead(0)
 		return err

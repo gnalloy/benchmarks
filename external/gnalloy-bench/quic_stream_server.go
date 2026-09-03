@@ -6,12 +6,16 @@ import (
 	"sync"
 
 	"gnalloy.org/transport-quic"
+	"gnalloy.org/transport-quic/application"
 )
+
+const quicStreamALPNValue = "gnalloy-quic"
 
 type quicStreamServer struct {
 	addr     string
 	listener quic.Listener
 	payload  int
+	codec    application.LengthPrefixedCodec
 	ctx      context.Context
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
@@ -42,6 +46,7 @@ func startQUICStreamServer(parent context.Context, cfg config) (*quicStreamServe
 		addr:     listener.Addr().String(),
 		listener: listener,
 		payload:  cfg.Payload,
+		codec:    application.LengthPrefixedCodec{MaxFrameSize: cfg.Payload},
 		ctx:      ctx,
 		cancel:   cancel,
 	}
@@ -91,13 +96,13 @@ func (s *quicStreamServer) serveConn(conn quic.Connection) {
 func (s *quicStreamServer) serveStream(stream quic.Stream) {
 	defer s.wg.Done()
 	buffer := make([]byte, s.payload)
-	payload, err := readQUICStreamFrame(stream, buffer, s.payload)
+	payload, err := s.codec.ReadFrameInto(stream, buffer)
 	if err != nil {
 		stream.CancelRead(0)
 		stream.CancelWrite(0)
 		return
 	}
-	if err := writeQUICStreamFrame(stream, payload); err != nil {
+	if err := s.codec.WriteFrame(stream, payload); err != nil {
 		stream.CancelWrite(0)
 		return
 	}
@@ -111,8 +116,8 @@ func ensureQUICStreamConfig(cfg config) error {
 	if quicStreamALPN(cfg) != quicStreamALPNValue {
 		return fmt.Errorf("%w: QUIC stream requires ALPN %s", errInvalidConfig, quicStreamALPNValue)
 	}
-	if cfg.Payload > quicStreamMaxFrameSize {
-		return fmt.Errorf("%w: QUIC stream payload exceeds %d bytes", errInvalidConfig, quicStreamMaxFrameSize)
+	if cfg.Payload > application.DefaultMaxFrameSize {
+		return fmt.Errorf("%w: QUIC stream payload exceeds %d bytes", errInvalidConfig, application.DefaultMaxFrameSize)
 	}
 	return nil
 }

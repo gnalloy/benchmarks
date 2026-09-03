@@ -32,6 +32,8 @@ gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f h1:5l35q8Bxsn+Xv0
 gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f/go.mod h1:Hp87MhDuVqXEA3UAAsPhaGCX16fTuOFfT40SBjqS8zc=
 gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b h1:Jak/BDZxVrpkUIbDR3HLw2MTgHubaEuR8zZht7wkDOM=
 gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b/go.mod h1:TchYby9N52E0m9kKaqDzrHWDh91n8NjyyqIVbzCtkHo=
+gnalloy.org/transport-quic v0.0.0-20260903161505-c5398d0945b7 h1:NO7ublMNQ7Me4aMKm69a6+m8BlLoPD6/13s59zvdOV4=
+gnalloy.org/transport-quic v0.0.0-20260903161505-c5398d0945b7/go.mod h1:TchYby9N52E0m9kKaqDzrHWDh91n8NjyyqIVbzCtkHo=
 gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3 h1:OgvNwgeDUBH/8/ieUZMaBPzsxa2k0AChZO8T+8JXa0k=
 gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3/go.mod h1:nR7rAmU0ZsUb5g04Khl97HYtNdlRmYOGZ2d3pX/aTN0=
 gnalloy.org/transport-udp v0.0.0-20260902120030-2fd09e2bbc01 h1:wjxC0lMUoVB6gTktUxyQ+1ZMKUEc0lwHgz2maHUG0T8=

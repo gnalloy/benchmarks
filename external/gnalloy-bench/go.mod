@@ -10,7 +10,7 @@ require (
 	gnalloy.org/gnalloy v0.0.0-20260902225229-13bb86030d0f
 	gnalloy.org/handler-tls v0.0.0-20260903001313-0f791e0c6b0f
 	gnalloy.org/transport-http3 v0.0.0-20260831160058-2e1e6b32662f
-	gnalloy.org/transport-quic v0.0.0-20260831160033-1cd9e6f8552b
+	gnalloy.org/transport-quic v0.0.0-20260903161505-c5398d0945b7
 	gnalloy.org/transport-tcp v0.0.0-20260901170722-14a382ab4ab3
 	gnalloy.org/transport-udp v0.0.0-20260902120030-2fd09e2bbc01
 	golang.org/x/net v0.58.0

@@ -30,7 +30,16 @@ func startServer(cfg config) (*benchmarkServer, error) {
 	body := responseBody(cfg.Payload)
 	options := []hertzconfig.Option{
 		server.WithListener(listener),
-		server.WithH2C(true),
+	}
+	if cfg.Protocol == protocolHTTP2 {
+		options = append(options, server.WithH2C(true))
+	} else {
+		tlsConfig, tlsErr := serverTLSConfig(cfg)
+		if tlsErr != nil {
+			_ = listener.Close()
+			return nil, tlsErr
+		}
+		options = append(options, server.WithALPN(true), server.WithTLS(tlsConfig))
 	}
 	engine := server.New(options...)
 	engine.AddProtocol("h2", factory.NewServerFactory(

@@ -17,3 +17,23 @@ func TestParseConfigRejectsUnsupportedProtocol(t *testing.T) {
 		t.Fatal("expected unsupported protocol error")
 	}
 }
+
+func TestParseConfigHTTPS2TLSVersions(t *testing.T) {
+	for _, version := range []string{tlsVersion12, tlsVersion13} {
+		t.Run(version, func(t *testing.T) {
+			cfg, err := parseConfig([]string{"-protocol", "https2", "-tls-version", version})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.TLSVersion != version {
+				t.Fatalf("tlsVersion=%q, want %q", cfg.TLSVersion, version)
+			}
+		})
+	}
+}
+
+func TestParseConfigRejectsHTTP2TLS11(t *testing.T) {
+	if _, err := parseConfig([]string{"-protocol", "https2", "-tls-version", "1.1"}); err == nil {
+		t.Fatal("expected HTTP/2 TLS 1.1 rejection")
+	}
+}

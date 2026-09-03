@@ -31,8 +31,8 @@ param(
     [long]$TargetRate = 0,
     [ValidateRange(1, 100)]
     [int]$Repetitions = 5,
-    [ValidateSet("gnalloy", "gnet", "netpoll", "fasthttp", "netty")]
-    [string[]]$Frameworks = @("gnalloy", "gnet", "netpoll", "fasthttp", "netty"),
+    [ValidateSet("gnalloy", "gnet", "netpoll", "hertz", "fasthttp", "netty")]
+    [string[]]$Frameworks = @("gnalloy", "gnet", "netpoll", "hertz", "fasthttp", "netty"),
     [ValidateRange(0, 300)]
     [int]$CooldownSeconds = 10,
     [bool]$SetPerformanceGovernor = $true,
@@ -213,7 +213,7 @@ function Start-RemoteServer {
     $command = @'
 cd '__REMOTE_REPO__'
 : >'__REMOTE_LOG__'
-nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' ALPN='__ALPN__' CIPHER_SUITES='__CIPHER_SUITES__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_READ_BUFFER_SIZE='__READ_BUFFER_SIZE__' GNALLOY_MAX_MESSAGES_PER_READ='__MAX_MESSAGES_PER_READ__' GNALLOY_EVENT_BATCH_SIZE='__EVENT_BATCH_SIZE__' GNALLOY_FLUSH_STRATEGY='__FLUSH_STRATEGY__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_ALLOC_PROFILE='__ALLOC_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' FASTHTTP_CPU_PROFILE='__CPU_PROFILE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
+nohup env SERVER_ADDR='__BIND_ADDR__' PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' ALPN='__ALPN__' CIPHER_SUITES='__CIPHER_SUITES__' PAYLOAD='__PAYLOAD__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_GOMAXPROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__GNALLOY_WORKERS__' GNALLOY_READ_BUFFER_SIZE='__READ_BUFFER_SIZE__' GNALLOY_MAX_MESSAGES_PER_READ='__MAX_MESSAGES_PER_READ__' GNALLOY_EVENT_BATCH_SIZE='__EVENT_BATCH_SIZE__' GNALLOY_FLUSH_STRATEGY='__FLUSH_STRATEGY__' GNALLOY_BOSS_CPU_SET='__BOSS_CPUS__' GNALLOY_WORKER_CPU_SET='__WORKER_CPUS__' GNALLOY_CPU_PROFILE='__CPU_PROFILE__' GNALLOY_ALLOC_PROFILE='__ALLOC_PROFILE__' GNALLOY_RUNTIME_TRACE='__RUNTIME_TRACE__' FASTHTTP_CPU_PROFILE='__CPU_PROFILE__' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__REMOTE_REPO__/external/bin/gnalloy-bench' FASTHTTP_BENCH='__REMOTE_REPO__/external/bin/fasthttp-bench' HERTZ_BENCH='__REMOTE_REPO__/external/bin/hertz-bench' NETTY_BENCH_JAR='__REMOTE_REPO__/external/bin/netty-bench.jar' bash '__SERVER_SCRIPT__' '__FRAMEWORK__' >'__REMOTE_LOG__' 2>&1 </dev/null &
 '@
     $command = $command.Replace("__REMOTE_REPO__", $ServerRepo).
         Replace("__REMOTE_LOG__", $remoteLog).
@@ -387,7 +387,7 @@ function Get-ProtocolCases {
 
 function Get-RotatedFrameworks {
     param([int]$Run)
-    $base = @("gnalloy", "gnet", "netpoll", "fasthttp", "netty")
+    $base = @("gnalloy", "gnet", "netpoll", "hertz", "fasthttp", "netty")
     $offset = ($Run - 1) % $base.Count
     for ($index = 0; $index -lt $base.Count; $index++) {
         $base[($index + $offset) % $base.Count]
@@ -431,7 +431,7 @@ uname -srmo
 awk -F ': ' '/^model name/{print "serverCPU=" $2; exit}' /proc/cpuinfo
 printf 'serverGovernor=%s\n' "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || printf unknown)"
 printf 'serverCPUTopology='; lscpu -p=CPU,CORE,SOCKET | grep -v '^#' | tr '\n' ';'; printf '\n'
-sha256sum '__SERVER_REPO__/external/bin/gnalloy-bench' '__SERVER_REPO__/external/bin/fasthttp-bench' '__SERVER_REPO__/external/bin/netty-bench.jar'
+sha256sum '__SERVER_REPO__/external/bin/gnalloy-bench' '__SERVER_REPO__/external/bin/hertz-bench' '__SERVER_REPO__/external/bin/fasthttp-bench' '__SERVER_REPO__/external/bin/netty-bench.jar'
 '@.Replace("__SERVER_REPO__", $ServerRepo)
     $serverMetadata = Invoke-SSH -HostName $ServerHost -Command $serverMetadataCommand -IgnoreStandardError
     Add-Content -LiteralPath $Output -Value $serverMetadata -Encoding utf8

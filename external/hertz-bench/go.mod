@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/cloudwego/hertz v0.10.6
 	github.com/hertz-contrib/http2 v0.1.8
-	gnalloy.org/benchmarks v0.0.0-20260903071622-319d1d1310a8
+	gnalloy.org/benchmarks v0.0.0-20260903205909-9f6848b573ca
 )
 
 require (

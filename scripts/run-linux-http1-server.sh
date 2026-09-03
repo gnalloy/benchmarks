@@ -29,6 +29,7 @@ NICE_LEVEL="${NICE_LEVEL:-0}"
 SERVER_PID_FILE="${SERVER_PID_FILE:-/tmp/gnalloy-http1-cross-host.pid}"
 GNALLOY_BENCH="${GNALLOY_BENCH:-${REPO_ROOT}/external/bin/gnalloy-bench}"
 FASTHTTP_BENCH="${FASTHTTP_BENCH:-${REPO_ROOT}/external/bin/fasthttp-bench}"
+HERTZ_BENCH="${HERTZ_BENCH:-${REPO_ROOT}/external/bin/hertz-bench}"
 NETTY_BENCH_JAR="${NETTY_BENCH_JAR:-${REPO_ROOT}/external/bin/netty-bench.jar}"
 JAVA_BIN="${JAVA_BIN:-/opt/software/java21/bin/java}"
 
@@ -72,6 +73,9 @@ case "${FRAMEWORK}" in
     ;;
   fasthttp)
     require_executable "${FASTHTTP_BENCH}"
+    ;;
+  hertz)
+    require_executable "${HERTZ_BENCH}"
     ;;
   netty)
     require_file "${NETTY_BENCH_JAR}"
@@ -156,6 +160,10 @@ case "${FRAMEWORK}" in
     fi
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${FASTHTTP_BENCH}" \
       -protocol "${PROTOCOL}" -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -timeout 5m "${tls_args[@]}" "${profile_args[@]}"
+    ;;
+  hertz)
+    exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" env GOMAXPROCS="${SERVER_GOMAXPROCS}" "${HERTZ_BENCH}" \
+      -protocol "${PROTOCOL}" -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" -timeout 5m "${tls_args[@]}"
     ;;
   netty)
     exec taskset -c "${SERVER_CPU_SET}" nice -n "${NICE_LEVEL}" "${JAVA_BIN}" -jar "${NETTY_BENCH_JAR}" \

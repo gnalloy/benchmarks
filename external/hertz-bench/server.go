@@ -31,18 +31,24 @@ func startServer(cfg config) (*benchmarkServer, error) {
 	options := []hertzconfig.Option{
 		server.WithListener(listener),
 	}
-	if cfg.Protocol == protocolHTTP2 {
+	switch cfg.Protocol {
+	case protocolHTTP2:
 		options = append(options, server.WithH2C(true))
-	} else {
+	case protocolHTTPS1, protocolHTTPS2:
 		tlsConfig, tlsErr := serverTLSConfig(cfg)
 		if tlsErr != nil {
 			_ = listener.Close()
 			return nil, tlsErr
 		}
-		options = append(options, server.WithALPN(true), server.WithTLS(tlsConfig))
+		if cfg.Protocol == protocolHTTPS2 {
+			options = append(options, server.WithALPN(true))
+		}
+		options = append(options, server.WithTLS(tlsConfig))
 	}
 	engine := server.New(options...)
-	engine.AddProtocol("h2", factory.NewServerFactory(http2ServerOptions(cfg.Timeout)...))
+	if cfg.Protocol == protocolHTTP2 || cfg.Protocol == protocolHTTPS2 {
+		engine.AddProtocol("h2", factory.NewServerFactory(http2ServerOptions(cfg.Timeout)...))
+	}
 	engine.GET("/bench", func(_ context.Context, ctx *app.RequestContext) {
 		ctx.SetStatusCode(consts.StatusOK)
 		ctx.SetContentType("application/octet-stream")

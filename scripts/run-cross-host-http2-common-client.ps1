@@ -13,6 +13,7 @@ param(
     [int]$ClientGoMaxProcs = 4,
     [int]$EventLoops = 3,
     [int]$GnalloyWorkers = 3,
+    [int]$GnalloyMaxMessagesPerRead = 32,
     [int[]]$Payloads = @(128, 1024),
     [int]$Connections = 64,
     [int]$Messages = 20000,
@@ -127,7 +128,7 @@ function Start-Server {
     $command = @'
 cd '__SERVER_REPO__'
 : >'__LOG__'
-nohup env PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' PAYLOAD='__PAYLOAD__' SERVER_ADDR='__BIND_ADDR__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_PROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__WORKERS__' GNALLOY_BOSS_CPU_SET='3' GNALLOY_WORKER_CPU_SET='0,1,2' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__GNALLOY_BENCH__' HERTZ_BENCH='__HERTZ_BENCH__' NETTY_BENCH_JAR='__NETTY_JAR__' bash ./scripts/run-linux-http2-server.sh '__FRAMEWORK__' >'__LOG__' 2>&1 </dev/null &
+nohup env PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' PAYLOAD='__PAYLOAD__' SERVER_ADDR='__BIND_ADDR__' SERVER_CPU_SET='__SERVER_CPUS__' SERVER_GOMAXPROCS='__SERVER_PROCS__' EVENT_LOOPS='__EVENT_LOOPS__' GNALLOY_WORKERS='__WORKERS__' GNALLOY_MAX_MESSAGES_PER_READ='__MAX_MESSAGES_PER_READ__' GNALLOY_BOSS_CPU_SET='3' GNALLOY_WORKER_CPU_SET='0,1,2' SERVER_PID_FILE='__PID_FILE__' GNALLOY_BENCH='__GNALLOY_BENCH__' HERTZ_BENCH='__HERTZ_BENCH__' NETTY_BENCH_JAR='__NETTY_JAR__' bash ./scripts/run-linux-http2-server.sh '__FRAMEWORK__' >'__LOG__' 2>&1 </dev/null &
 '@
     $command = $command.Replace("__SERVER_REPO__", $ServerRepo).
         Replace("__LOG__", $remoteLog).
@@ -139,6 +140,7 @@ nohup env PROTOCOL='__PROTOCOL__' TLS_VERSION='__TLS_VERSION__' PAYLOAD='__PAYLO
         Replace("__SERVER_PROCS__", $ServerGoMaxProcs.ToString()).
         Replace("__EVENT_LOOPS__", $EventLoops.ToString()).
         Replace("__WORKERS__", $GnalloyWorkers.ToString()).
+        Replace("__MAX_MESSAGES_PER_READ__", $GnalloyMaxMessagesPerRead.ToString()).
         Replace("__PID_FILE__", $remotePIDFile).
         Replace("__GNALLOY_BENCH__", $GnalloyBench).
         Replace("__HERTZ_BENCH__", $HertzBench).
@@ -191,7 +193,7 @@ function Get-RotatedFrameworks {
 foreach ($value in @($ServerHost, $ClientHost, $SSHUser, $ServerRepo, $ServerBindAddress, $TargetAddress, $ServerCPUSet, $ClientCPUSet, $GnalloyBench, $HertzBench, $NettyBenchJar, $ClientBench)) {
     Assert-SafeValue -Name "parameter" -Value $value
 }
-if ($Connections -le 0 -or $Messages -le 0 -or $WarmupMessages -lt 0 -or $LatencySampleRate -lt 0 -or $Repetitions -le 0 -or $CooldownSeconds -lt 0) {
+if ($Connections -le 0 -or $Messages -le 0 -or $WarmupMessages -lt 0 -or $LatencySampleRate -lt 0 -or $Repetitions -le 0 -or $CooldownSeconds -lt 0 -or $GnalloyMaxMessagesPerRead -le 0) {
     throw "Load parameters are out of range"
 }
 foreach ($payload in $Payloads) {
@@ -220,7 +222,7 @@ try {
         "timestamp=$([DateTimeOffset]::Now.ToString('o'))",
         "crossHost=true serverHost=$ServerHost clientHost=$ClientHost target=$TargetAddress",
         "protocols=http2,https2 tlsVersions=1.2,1.3 payloads=$($Payloads -join ',') connections=$Connections messages=$Messages warmupMessages=$WarmupMessages latencySampleRate=$LatencySampleRate repetitions=$Repetitions cooldownSeconds=$CooldownSeconds",
-        "serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs commonClient=gnalloy-tcp+handler-tls+codec-http2 performanceGovernor=$SetPerformanceGovernor",
+        "serverCPUSet=$ServerCPUSet serverGOMAXPROCS=$ServerGoMaxProcs clientCPUSet=$ClientCPUSet clientGOMAXPROCS=$ClientGoMaxProcs gnalloyMaxMessagesPerRead=$GnalloyMaxMessagesPerRead commonClient=gnalloy-tcp+handler-tls+codec-http2 performanceGovernor=$SetPerformanceGovernor",
         "unsupportedFrameworks=gnet,netpoll,fasthttp status=N/A reason=no-native-http2-codec"
     ) -Encoding utf8
 

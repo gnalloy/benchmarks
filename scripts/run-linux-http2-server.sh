@@ -16,6 +16,7 @@ GNALLOY_WORKERS="${GNALLOY_WORKERS:-3}"
 GNALLOY_BOSS_CPU_SET="${GNALLOY_BOSS_CPU_SET:-3}"
 GNALLOY_WORKER_CPU_SET="${GNALLOY_WORKER_CPU_SET:-0,1,2}"
 GNALLOY_READ_BUFFER_SIZE="${GNALLOY_READ_BUFFER_SIZE:-4096}"
+GNALLOY_MAX_MESSAGES_PER_READ="${GNALLOY_MAX_MESSAGES_PER_READ:-32}"
 GNALLOY_CPU_PROFILE="${GNALLOY_CPU_PROFILE:-}"
 SERVER_PID_FILE="${SERVER_PID_FILE:-/tmp/gnalloy-http2-cross-host.pid}"
 GNALLOY_BENCH="${GNALLOY_BENCH:-${REPO_ROOT}/external/bin/gnalloy-bench}"
@@ -53,6 +54,7 @@ require_positive_integer SERVER_GOMAXPROCS "${SERVER_GOMAXPROCS}"
 require_positive_integer EVENT_LOOPS "${EVENT_LOOPS}"
 require_positive_integer GNALLOY_WORKERS "${GNALLOY_WORKERS}"
 require_positive_integer GNALLOY_READ_BUFFER_SIZE "${GNALLOY_READ_BUFFER_SIZE}"
+require_positive_integer GNALLOY_MAX_MESSAGES_PER_READ "${GNALLOY_MAX_MESSAGES_PER_READ}"
 taskset -c "${SERVER_CPU_SET}" true
 if [[ -e "${SERVER_PID_FILE}" ]]; then
   printf 'server PID file already exists: %s\n' "${SERVER_PID_FILE}" >&2
@@ -79,6 +81,7 @@ case "${FRAMEWORK}" in
       -protocol "${PROTOCOL}" -server-only=true -addr "${SERVER_ADDR}" -payload "${PAYLOAD}" \
       -backend epoll -boss 1 -workers "${GNALLOY_WORKERS}" -boss-cpus "${GNALLOY_BOSS_CPU_SET}" \
       -worker-cpus "${GNALLOY_WORKER_CPU_SET}" -read-buffer-size "${GNALLOY_READ_BUFFER_SIZE}" \
+      -max-messages-per-read "${GNALLOY_MAX_MESSAGES_PER_READ}" \
       -timeout 5m "${tls_args[@]}" "${profile_args[@]}"
     ;;
   hertz)

@@ -57,6 +57,8 @@ func runClientOnly(ctx context.Context, cfg config) (benchResult, error) {
 	switch cfg.Protocol {
 	case "http2", "https2":
 		return runHTTP2Load(ctx, cfg, cfg.Addr)
+	case "http3":
+		return runHTTP3Load(ctx, cfg, cfg.Addr)
 	default:
 		return benchResult{}, fmt.Errorf("%w: client-only does not support %s", errInvalidConfig, cfg.Protocol)
 	}
@@ -80,6 +82,13 @@ func runServerOnly(ctx context.Context, cfg config, stdout io.Writer) error {
 		return waitForServerStop(ctx, stdout, cfg, server.addr)
 	case "http2", "https2":
 		server, err := startHTTP2Server(ctx, cfg)
+		if err != nil {
+			return err
+		}
+		defer server.stop()
+		return waitForServerStop(ctx, stdout, cfg, server.addr)
+	case "http3":
+		server, err := startHTTP3Server(ctx, cfg)
 		if err != nil {
 			return err
 		}

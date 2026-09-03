@@ -56,6 +56,11 @@ public final class NettyEchoBenchmark {
             awaitShutdown(config, server.address(), server);
             return;
         }
+        if (config.http3Family()) {
+            Http3Server server = Http3Server.start(config);
+            awaitShutdown(config, server.address(), server);
+            return;
+        }
         EchoServer server = EchoServer.start(config);
         awaitShutdown(config, server.address(), server);
     }

@@ -172,20 +172,24 @@ func runHTTP3Benchmark(ctx context.Context, cfg config) (benchResult, error) {
 		return benchResult{}, err
 	}
 	defer server.stop()
+	return runHTTP3Load(ctx, cfg, server.addr)
+}
 
+func runHTTP3Load(ctx context.Context, cfg config, addr string) (benchResult, error) {
 	resourcesBefore := captureResourceSnapshot()
 	tlsConfig, err := clientTLSConfig(cfg)
 	if err != nil {
 		return benchResult{}, err
 	}
 	h3Config := benchh3.Config{
-		Addr:              server.addr,
+		Addr:              addr,
 		ServerName:        tlsServerName(),
 		Payload:           cfg.Payload,
 		Connections:       cfg.Connections,
 		Messages:          cfg.Messages,
 		Timeout:           cfg.Timeout,
 		LatencySampleRate: cfg.LatencySampleRate,
+		TargetRate:        cfg.TargetRate,
 		WarmupMessages:    cfg.WarmupMessages,
 		TLS:               tlsConfig,
 	}
@@ -205,7 +209,9 @@ func runHTTP3Benchmark(ctx context.Context, cfg config) (benchResult, error) {
 			P999:    result.Latency.P999,
 			Max:     result.Latency.Max,
 		},
-		Resources: resourceDeltaSince(resourcesBefore, captureResourceSnapshot()),
+		ScheduleDelay: latencySummary{Samples: result.ScheduleDelay.Samples, P50: result.ScheduleDelay.P50, P95: result.ScheduleDelay.P95, P99: result.ScheduleDelay.P99, P999: result.ScheduleDelay.P999, Max: result.ScheduleDelay.Max},
+		RoundTrip:     latencySummary{Samples: result.RoundTrip.Samples, P50: result.RoundTrip.P50, P95: result.RoundTrip.P95, P99: result.RoundTrip.P99, P999: result.RoundTrip.P999, Max: result.RoundTrip.Max},
+		Resources:     resourceDeltaSince(resourcesBefore, captureResourceSnapshot()),
 	}
 	return out, err
 }

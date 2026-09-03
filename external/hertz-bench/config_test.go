@@ -37,3 +37,9 @@ func TestParseConfigRejectsHTTP2TLS11(t *testing.T) {
 		t.Fatal("expected HTTP/2 TLS 1.1 rejection")
 	}
 }
+
+func TestParseConfigRejectsHTTPS2WithoutH2ALPN(t *testing.T) {
+	if _, err := parseConfig([]string{"-protocol", "https2", "-alpn", "http/1.1"}); err == nil {
+		t.Fatal("expected HTTP/2 ALPN rejection")
+	}
+}

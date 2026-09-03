@@ -21,6 +21,7 @@ type config struct {
 	Payload    int
 	Timeout    time.Duration
 	TLSVersion string
+	ALPN       string
 }
 
 func parseConfig(args []string) (config, error) {
@@ -30,6 +31,7 @@ func parseConfig(args []string) (config, error) {
 		Payload:    1024,
 		Timeout:    5 * time.Minute,
 		TLSVersion: tlsVersion13,
+		ALPN:       "h2",
 	}
 	fs := flag.NewFlagSet("hertz-bench", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -38,6 +40,7 @@ func parseConfig(args []string) (config, error) {
 	fs.IntVar(&cfg.Payload, "payload", cfg.Payload, "payload bytes")
 	fs.DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "server lifetime")
 	fs.StringVar(&cfg.TLSVersion, "tls-version", cfg.TLSVersion, "TLS protocol version: 1.2 or 1.3")
+	fs.StringVar(&cfg.ALPN, "alpn", cfg.ALPN, "TLS ALPN protocol")
 	if err := fs.Parse(args); err != nil {
 		return config{}, err
 	}
@@ -61,6 +64,9 @@ func (c config) validate() error {
 	}
 	if c.Timeout <= 0 {
 		return fmt.Errorf("hertz-bench: timeout must be positive")
+	}
+	if c.Protocol == protocolHTTPS2 && c.ALPN != "h2" {
+		return fmt.Errorf("hertz-bench: HTTP/2 over TLS requires ALPN h2")
 	}
 	return nil
 }

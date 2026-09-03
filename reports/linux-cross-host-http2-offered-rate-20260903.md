@@ -21,16 +21,20 @@
 | Offered rate | 服务端 | 实际吞吐 (ops/s) | Total P99 | Schedule delay P99 | RTT P50 | RTT P95 | RTT P99 | RTT P99.9 |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|
 | 60,000 | Gnalloy | 59,998.89 | 2.619ms | 1.515ms | 0.401ms | 0.753ms | 1.359ms | 4.492ms |
+| 60,000 | Hertz | 59,994.04 | 139.776ms | 138.724ms | 0.738ms | 1.590ms | 2.485ms | 6.399ms |
 | 60,000 | Netty | 59,998.80 | 280.663ms | 278.979ms | 0.458ms | 0.994ms | 2.239ms | 6.212ms |
 | 75,000 | Gnalloy | 74,997.47 | 3.244ms | 2.470ms | 0.451ms | 0.847ms | 1.400ms | 3.009ms |
+| 75,000 | Hertz | 69,586.55 | 1,313.487ms | 1,312.693ms | 0.873ms | 1.666ms | 2.436ms | 5.651ms |
 | 75,000 | Netty | 74,996.45 | 362.829ms | 362.225ms | 0.588ms | 1.130ms | 1.722ms | 6.329ms |
 | 85,000 | Gnalloy | 84,996.58 | 7.606ms | 6.326ms | 0.481ms | 0.922ms | 1.539ms | 2.785ms |
+| 85,000 | Hertz | 68,506.83 | 3,602.121ms | 3,601.115ms | 0.887ms | 1.696ms | 2.557ms | 6.658ms |
 | 85,000 | Netty | 84,838.58 | 623.182ms | 622.323ms | 0.633ms | 1.145ms | 1.611ms | 5.874ms |
 
 ## 结论
 
-- 60k 和 75k 是目标速率约束场景，吞吐相同，不用于声称吞吐领先。Gnalloy 的 RTT P99 分别比 Netty 低约 `39.3%` 和 `18.7%`。
+- 对 Gnalloy 与 Netty，60k 和 75k 是目标速率约束场景，吞吐相同，不用于声称吞吐领先。Gnalloy 的 RTT P99 分别比 Netty 低约 `39.3%` 和 `18.7%`。
 - 85k 时 Gnalloy 仍维持约 `84.997k ops/s`，Netty 中位数降至约 `84.839k ops/s`。Gnalloy RTT P99 低约 `4.4%`，优势缩小但没有反转。
+- Hertz 在 60k 时基本达到目标速率，但 RTT P99 中位数为 `2.485ms`，高于 Gnalloy 的 `1.359ms`。Hertz 在 75k 和 85k 时的实际吞吐中位数仅约 `69.6k` 和 `68.5k ops/s`，已经超过稳定容量。
 - Netty 在三档速率均出现明显 schedule backlog，85k 的 P99 达 `622ms`；Gnalloy 在 85k 的对应中位数为 `6.326ms`。Total latency 保留了这部分排队，RTT 则隔离实际发送后的网络、TLS、HTTP/2 codec 和服务端处理耗时。
 - 本次结果说明此前“饱和模式下 Gnalloy P99 高于 Netty”主要混入了不同饱和吞吐所造成的排队效应。在等 offered rate 下，本场景的 Gnalloy RTT P99 五轮中位数均低于 Netty。
 - 该结论只覆盖 HTTPS/2、TLS 1.2、128B 和本次两台主机。TLS 1.3、1KiB、HTTP/3 与 QUIC 必须分别测试，不能由本表外推。
@@ -41,4 +45,7 @@
 .\scripts\run-cross-host-http2-common-client.ps1 -Scenarios https2-tls12 -Payloads 128 -Frameworks gnalloy,netty -Repetitions 5 -TargetRate 60000
 .\scripts\run-cross-host-http2-common-client.ps1 -Scenarios https2-tls12 -Payloads 128 -Frameworks gnalloy,netty -Repetitions 5 -TargetRate 75000
 .\scripts\run-cross-host-http2-common-client.ps1 -Scenarios https2-tls12 -Payloads 128 -Frameworks gnalloy,netty -Repetitions 5 -TargetRate 85000
+.\scripts\run-cross-host-http2-common-client.ps1 -Scenarios https2-tls12 -Payloads 128 -Frameworks hertz -Repetitions 5 -TargetRate 60000 -Output reports/raw/linux-cross-host-http2-rate-60000-hertz.out
+.\scripts\run-cross-host-http2-common-client.ps1 -Scenarios https2-tls12 -Payloads 128 -Frameworks hertz -Repetitions 5 -TargetRate 75000 -Output reports/raw/linux-cross-host-http2-rate-75000-hertz.out
+.\scripts\run-cross-host-http2-common-client.ps1 -Scenarios https2-tls12 -Payloads 128 -Frameworks hertz -Repetitions 5 -TargetRate 85000 -Output reports/raw/linux-cross-host-http2-rate-85000-hertz.out
 ```

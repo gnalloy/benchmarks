@@ -53,6 +53,19 @@ Gnalloy 在两个 payload 的饱和吞吐和 RTT P99 均为本矩阵最优。128
 
 128B 时 Gnalloy RTT P50/P99 均最低。1KiB 时 Gnalloy P50 最低，但 P99 比 Hertz 高约 `3.5%`、比 fasthttp 高约 `3.8%`，因此明文固定速率场景尚不能声明所有尾延迟全面领先。
 
+### 当前版本明文 1KiB 十轮复验
+
+使用 benchmark `6e0d2b754350e63b2028a676494432f6e0d9b4e9` 和统一 `http1-load` 客户端，在 `70,000 ops/s` 下对四个服务端轮转执行 10 轮。Gnalloy 请求完整经过 TCP transport、Channel Pipeline、HTTP/1 codec 和业务 handler。共 40 个 case，全部 `errors=0`。
+
+| 服务端 | 实际吞吐中位数 ops/s | RTT P50 中位数 ms | RTT P95 中位数 ms | RTT P99 中位数 ms | RTT P99 范围 ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Gnalloy | **69,992.83** | **0.432** | **0.719** | 0.903 | 0.819-1.063 |
+| Hertz | 69,991.80 | 0.513 | 0.739 | 0.893 | 0.760-1.298 |
+| fasthttp | 69,991.78 | 0.451 | 0.751 | **0.891** | 0.844-1.013 |
+| Netty | 69,991.36 | 0.452 | 0.808 | 3.322 | 1.199-5.364 |
+
+Gnalloy 的 RTT P50/P95 最低，但 RTT P99 比 fasthttp 高 `1.39%`，比 Hertz 高 `1.18%`，仍未在明文 1KiB 低负载尾延迟上全面领先。Netty 的客户端 schedule-delay 尖峰较大，排名继续使用实际发送后的 RTT 指标，不使用 total latency。
+
 ## HTTPS/1.1 完整 TLS 矩阵
 
 完整 TLS 1.1/1.2/1.3 矩阵使用 Gnalloy 二进制 `74bf33a6d27f99213a8b70ecb65fd720075fc9101c8b25a59929551d7239f64c`。该二进制与当前二进制使用相同 Gnalloy core `13bb860`，当前二进制额外包含 TLS nonblocking 状态发布竞态修复 `7ca6328`。后文使用当前二进制重新验证了原先差距最大的 TLS 1.3/1KiB 场景。
